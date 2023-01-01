@@ -1,0 +1,13 @@
+diff --git a/components/page_info/page_info_ui.cc b/components/page_info/page_info_ui.cc
+index 4b4797306ba9cc5e78f6a1a36e74701ca0b85eed..d3ebc1d836707a75ad2533d366c864e7b20315ca 100644
+--- a/components/page_info/page_info_ui.cc
++++ b/components/page_info/page_info_ui.cc
+@@ -520,7 +520,7 @@ PageInfoUI::GetSecurityDescription(const IdentityInfo& identity_info) const {
+                                            IDS_PAGE_INFO_MIXED_CONTENT_DETAILS,
+                                            SecurityDescriptionType::CONNECTION);
+         default:
+-
++          BEACON_ADD_PAGE_INFO_DETAILS
+           auto description = CreateSecurityDescription(
+               SecuritySummaryColor::GREEN, IDS_PAGE_INFO_SECURE_SUMMARY,
+               base::FeatureList::IsEnabled(

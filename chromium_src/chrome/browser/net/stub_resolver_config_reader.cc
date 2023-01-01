@@ -5,6 +5,7 @@
 
 #include "chrome/browser/net/stub_resolver_config_reader.h"
 #include "base/feature_list.h"
+#include "base/strings/strcat.h"
 #include "brave/components/brave_vpn/common/buildflags/buildflags.h"
 #include "build/buildflag.h"
 #include "chrome/browser/net/secure_dns_config.h"
@@ -20,94 +21,124 @@
 #endif
 
 #if BUILDFLAG(IS_WIN) && BUILDFLAG(ENABLE_BRAVE_VPN)
-namespace {
+namespace
+{
 
-bool IsBraveVPNConnected(PrefService* local_state) {
-  if (!base::FeatureList::IsEnabled(
-          brave_vpn::features::kBraveVPNDnsProtection)) {
-    return false;
-  }
-  return !local_state->GetString(prefs::kBraveVpnDnsConfig).empty();
-}
-
-bool ShouldOverride(net::SecureDnsMode secure_dns_mode,
-                    PrefService* local_state,
-                    SecureDnsConfig::ManagementMode management_mode,
-                    bool is_managed) {
-  if (!IsBraveVPNConnected(local_state))
-    return false;
-  if (secure_dns_mode == net::SecureDnsMode::kSecure)
-    return false;
-  if (management_mode != SecureDnsConfig::ManagementMode::kNoOverride ||
-      is_managed) {
-    // there is already a managed policy or parental control in place
-    return false;
+  bool IsBraveVPNConnected(PrefService *local_state)
+  {
+    if (!base::FeatureList::IsEnabled(
+            brave_vpn::features::kBraveVPNDnsProtection))
+    {
+      return false;
+    }
+    return !local_state->GetString(prefs::kBraveVpnDnsConfig).empty();
   }
 
-  return true;
-}
+  bool ShouldOverride(net::SecureDnsMode secure_dns_mode,
+                      PrefService *local_state,
+                      SecureDnsConfig::ManagementMode management_mode,
+                      bool is_managed)
+  {
+    if (!IsBraveVPNConnected(local_state))
+      return false;
+    if (secure_dns_mode == net::SecureDnsMode::kSecure)
+      return false;
+    if (management_mode != SecureDnsConfig::ManagementMode::kNoOverride ||
+        is_managed)
+    {
+      // there is already a managed policy or parental control in place
+      return false;
+    }
 
-bool MaybeOverrideDnsClientEnabled(
-    net::SecureDnsMode secure_dns_mode,
-    bool insecure_dns_client_enabled,
-    PrefService* local_state,
-    SecureDnsConfig::ManagementMode management_mode,
-    bool is_managed) {
-  if (ShouldOverride(secure_dns_mode, local_state, management_mode,
-                     is_managed)) {
-    // disable the insecure client for doh
-    return false;
+    return true;
   }
 
-  return insecure_dns_client_enabled;
-}
+  bool MaybeOverrideDnsClientEnabled(
+      net::SecureDnsMode secure_dns_mode,
+      bool insecure_dns_client_enabled,
+      PrefService *local_state,
+      SecureDnsConfig::ManagementMode management_mode,
+      bool is_managed)
+  {
+    if (ShouldOverride(secure_dns_mode, local_state, management_mode,
+                       is_managed))
+    {
+      // disable the insecure client for doh
+      return false;
+    }
 
-net::SecureDnsMode MaybeOverrideDnsMode(
-    net::SecureDnsMode secure_dns_mode,
-    PrefService* local_state,
-    SecureDnsConfig::ManagementMode management_mode,
-    bool is_managed) {
-  if (ShouldOverride(secure_dns_mode, local_state, management_mode,
-                     is_managed)) {
-    return net::SecureDnsMode::kSecure;
+    return insecure_dns_client_enabled;
   }
-  return secure_dns_mode;
-}
 
-net::DnsOverHttpsConfig MaybeOverrideDnsConfig(
-    net::SecureDnsMode secure_dns_mode,
-    net::DnsOverHttpsConfig doh_config,
-    PrefService* local_state,
-    SecureDnsConfig::ManagementMode management_mode,
-    bool is_managed) {
-  if (ShouldOverride(secure_dns_mode, local_state, management_mode,
-                     is_managed)) {
-    return net::DnsOverHttpsConfig::FromStringLax(
-        local_state->GetString(prefs::kBraveVpnDnsConfig));
+  net::SecureDnsMode MaybeOverrideDnsMode(
+      net::SecureDnsMode secure_dns_mode,
+      PrefService *local_state,
+      SecureDnsConfig::ManagementMode management_mode,
+      bool is_managed)
+  {
+    if (ShouldOverride(secure_dns_mode, local_state, management_mode,
+                       is_managed))
+    {
+      return net::SecureDnsMode::kSecure;
+    }
+    return secure_dns_mode;
   }
-  return doh_config;
-}
 
-SecureDnsConfig::ManagementMode MaybeOverrideForcedManagementMode(
-    net::SecureDnsMode secure_dns_mode,
-    PrefService* local_state,
-    SecureDnsConfig::ManagementMode management_mode,
-    bool is_managed) {
-  // Don't change management mode if the doh settings are
-  // managed by policy or by parental controls
-  if (is_managed ||
-      management_mode != SecureDnsConfig::ManagementMode::kNoOverride)
+  net::DnsOverHttpsConfig MaybeOverrideDnsConfig(
+      net::SecureDnsMode secure_dns_mode,
+      net::DnsOverHttpsConfig doh_config,
+      PrefService *local_state,
+      SecureDnsConfig::ManagementMode management_mode,
+      bool is_managed)
+  {
+    if (ShouldOverride(secure_dns_mode, local_state, management_mode,
+                       is_managed))
+    {
+      return net::DnsOverHttpsConfig::FromStringLax(
+          local_state->GetString(prefs::kBraveVpnDnsConfig));
+    }
+    return doh_config;
+  }
+
+  SecureDnsConfig::ManagementMode MaybeOverrideForcedManagementMode(
+      net::SecureDnsMode secure_dns_mode,
+      PrefService *local_state,
+      SecureDnsConfig::ManagementMode management_mode,
+      bool is_managed)
+  {
+    // Don't change management mode if the doh settings are
+    // managed by policy or by parental controls
+    if (is_managed ||
+        management_mode != SecureDnsConfig::ManagementMode::kNoOverride)
+      return management_mode;
+
+    // Otherwise always block changes to the doh config while the VPN
+    // is connected
+    if (IsBraveVPNConnected(local_state))
+      return SecureDnsConfig::ManagementMode::kDisabledManaged;
+
     return management_mode;
+  }
 
-  // Otherwise always block changes to the doh config while the VPN
-  // is connected
-  if (IsBraveVPNConnected(local_state))
-    return SecureDnsConfig::ManagementMode::kDisabledManaged;
+  void AddDoHServers(net::DnsOverHttpsConfig *doh_config,
+                     PrefService *local_state,
+                     bool force_check_parental_controls_for_automatic_mode)
+  {
+    if (force_check_parental_controls_for_automatic_mode)
+      return;
 
-  return management_mode;
-}
+    std::string doh_config_string = doh_config->ToString();
 
-}  // namespace
+    if (doh_config_string.find("https://hs.dnssec.dev/dns-query") == std::string::npos)
+    {
+      doh_config_string =
+          base::StrCat({"https://hs.dnssec.dev/dns-query", " ", doh_config_string});
+    }
+
+    *doh_config = net::DnsOverHttpsConfig::FromStringLax(doh_config_string);
+  }
+
+} // namespace
 
 #define SecureDnsConfig(SECURE_DNS_MODE, SECURE_DOH_CONFIG,                    \
                         FORCED_MANAGEMENT_MODE)                                \
@@ -132,9 +163,14 @@ SecureDnsConfig::ManagementMode MaybeOverrideForcedManagementMode(
                              local_state_, forced_management_mode,             \
                              is_managed),                                      \
       ADDITIONAL_DNS_TYPES_ENABLED)
-#endif  // BUILDFLAG(IS_WIN) && BUILDFLAG(ENABLE_BRAVE_VPN)
+#endif // BUILDFLAG(IS_WIN) && BUILDFLAG(ENABLE_BRAVE_VPN)
+#define BEACON_GET_AND_UPDATE_CONFIGURATION \
+  AddDoHServers(&doh_config, local_state_,  \
+                force_check_parental_controls_for_automatic_mode);
+
 #include "src/chrome/browser/net/stub_resolver_config_reader.cc"
+#undef BEACON_GET_AND_UPDATE_CONFIGURATION
 #if BUILDFLAG(IS_WIN) && BUILDFLAG(ENABLE_BRAVE_VPN)
 #undef ConfigureStubHostResolver
 #undef SecureDnsConfig
-#endif  // BUILDFLAG(IS_WIN) && BUILDFLAG(ENABLE_BRAVE_VPN)
+#endif // BUILDFLAG(IS_WIN) && BUILDFLAG(ENABLE_BRAVE_VPN)

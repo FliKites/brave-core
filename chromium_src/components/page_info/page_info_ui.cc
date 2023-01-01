@@ -9,11 +9,11 @@
 #if BUILDFLAG(ENABLE_IPFS)
 #include "brave/components/ipfs/ipfs_utils.h"
 #include "components/grit/brave_components_strings.h"
-#endif  // BUILDFLAG(ENABLE_IPFS)
+#endif // BUILDFLAG(ENABLE_IPFS)
 
 #if BUILDFLAG(ENABLE_IPFS)
 #define GetSecurityDescription GetSecurityDescription_ChromiumImpl
-#endif  // BUILDFLAG(ENABLE_IPFS)
+#endif // BUILDFLAG(ENABLE_IPFS)
 
 #include "src/components/page_info/page_info_ui.cc"
 
@@ -21,11 +21,12 @@
 #undef GetSecurityDescription
 
 std::unique_ptr<PageInfoUI::SecurityDescription>
-PageInfoUI::GetSecurityDescription(const IdentityInfo& identity_info) const {
+PageInfoUI::GetSecurityDescription(const IdentityInfo &identity_info) const
+{
   if (!ipfs::IsIPFSScheme(GURL(identity_info.site_identity)))
     return GetSecurityDescription_ChromiumImpl(identity_info);
   return CreateSecurityDescription(
       SecuritySummaryColor::GREEN, IDS_PAGE_INFO_IPFS_BUBBLE_TITTLE,
       IDS_PAGE_INFO_IPFS_BUBBLE_TEXT, SecurityDescriptionType::CONNECTION);
 }
-#endif  // BUILDFLAG(ENABLE_IPFS)
+#endif // BUILDFLAG(ENABLE_IPFS)

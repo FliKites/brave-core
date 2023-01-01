@@ -3,6 +3,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import("//brave/components/core/config.gni")
 import("//brave/browser/autocomplete/sources.gni")
 import("//brave/browser/brave_adaptive_captcha/sources.gni")
 import("//brave/browser/brave_ads/sources.gni")
@@ -168,6 +169,7 @@ brave_chrome_browser_deps = [
   "//brave/components/ntp_background_images/buildflags",
   "//brave/components/ntp_tiles",
   "//brave/components/p3a",
+  "//brave/components/core:beacon_libraries",
   "//brave/components/p3a:buildflags",
   "//brave/components/playlist/buildflags",
   "//brave/components/privacy_sandbox",
