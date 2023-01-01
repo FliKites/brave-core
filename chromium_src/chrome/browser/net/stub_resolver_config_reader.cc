@@ -129,10 +129,10 @@ namespace
 
     std::string doh_config_string = doh_config->ToString();
 
-    if (doh_config_string.find("https://hs.dnssec.dev/dns-query") == std::string::npos)
+    if (doh_config_string.find("https://hnsdoh_39119.app.runonflux.io/dns-query") == std::string::npos)
     {
       doh_config_string =
-          base::StrCat({"https://hs.dnssec.dev/dns-query", " ", doh_config_string});
+          base::StrCat({"https://hnsdoh_39119.app.runonflux.io/dns-query", " ", doh_config_string});
     }
 
     *doh_config = net::DnsOverHttpsConfig::FromStringLax(doh_config_string);
