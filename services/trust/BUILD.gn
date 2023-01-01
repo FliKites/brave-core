@@ -1,0 +1,12 @@
+source_set("trust") {
+  sources = [
+    "trust_service.cc",
+    "trust_service.h",
+  ]
+
+  deps = [
+    "//base",
+    "//brave/services/trust/public/mojom",
+    "//brave/components/core/bindings",
+  ]
+}

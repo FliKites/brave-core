@@ -1,0 +1,12 @@
+diff --git a/services/network/network_context.cc b/services/network/network_context.cc
+index 18fd482ea1c74aa2d48aec69b1221aa4ac645052..ee61bcdf5b797bcc691371c8230ab68b4c1a629b 100644
+--- a/services/network/network_context.cc
++++ b/services/network/network_context.cc
+@@ -2226,6 +2226,7 @@ URLRequestContextOwner NetworkContext::MakeURLRequestContext(
+         std::move(cert_verifier), std::move(ct_verifier));
+ #endif  // BUILDFLAG(IS_CT_SUPPORTED)
+ 
++    BEACON_WRAP_WEB_PKI_DNSSEC_VERIFIER
+     // Whether the cert verifier is remote or in-process, we should wrap it in
+     // caching and coalescing layers to avoid extra verifications and IPCs.
+     cert_verifier = std::make_unique<net::CachingCertVerifier>(

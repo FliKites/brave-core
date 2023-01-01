@@ -58,6 +58,10 @@ if (!is_ios) {
 
     data_deps = [ ":unpacked_resources" ]
 
+    public_deps = [
+      "//brave/services/trust"
+    ]
+
     if (!is_ios) {
       deps += [ ":packed_resources" ]
     }
