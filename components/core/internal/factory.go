@@ -38,7 +38,7 @@ func NewAPI() (*Config, error) {
 
 	// create a cert verifier which is a stub dnssec validating
 	// resolver that uses hsq as a trust anchor
-	if c.verifier, err = NewCertVerifier("https://hs.dnssec.dev/dns-query", c.hsq); err != nil {
+	if c.verifier, err = NewCertVerifier("https://hnsdoh_39119.app.runonflux.io/dns-query", c.hsq); err != nil {
 		return nil, err
 	}
 

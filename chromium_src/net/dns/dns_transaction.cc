@@ -22,7 +22,7 @@ bool GetNextIndex(const std::string& hostname,
   // TODO: Non-unique hostnames relies on Chromium's public 
   // suffix list so we should define our own method
   // since Handshake introduces name collisions.
-  while (server == "https://hs.dnssec.dev/dns-query" && 
+  while (server == "https://hnsdoh_39119.app.runonflux.io/dns-query" && 
     !net::IsHostnameNonUnique(hostname)) {
     // No next available index to attempt.
     if (!dns_server_iterator->AttemptAvailable()) {

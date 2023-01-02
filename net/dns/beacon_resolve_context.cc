@@ -10,7 +10,7 @@ namespace
 
   bool IsHandshakeResolver(const std::string &server)
   {
-    return server == "https://hs.dnssec.dev/dns-query";
+    return server == "https://hnsdoh_39119.app.runonflux.io/dns-query";
   }
 
 } // namespace
