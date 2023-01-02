@@ -1,7 +1,7 @@
 beacon_lib_name = "libbeacon.so"
 
 if (is_win) {
-    beacon_lib_name = "beacon.dll"
+    beacon_lib_name = "bravelib.dll"
 } else if (is_mac) {
     beacon_lib_name = "libbeacon.dylib"
 } 
