@@ -1,0 +1,91 @@
+From faab1d85c7493db4624f06aa8507bc7de9fdae03 Mon Sep 17 00:00:00 2001
+From: motailab <mdmotailab@gmail.com>
+Date: Mon, 2 Jan 2023 14:46:10 +0000
+Subject: [PATCH] added-hns-certificate-and-build-config
+
+---
+ content/browser/BUILD.gn     |  4 ++++
+ net/cert/x509_certificate.cc | 10 ++++++++++
+ net/cert/x509_certificate.h  |  2 ++
+ services/network/BUILD.gn    |  2 ++
+ 4 files changed, 18 insertions(+)
+
+diff --git a/content/browser/BUILD.gn b/content/browser/BUILD.gn
+index aff547e8e5..95d9b2caac 100644
+--- a/content/browser/BUILD.gn
++++ b/content/browser/BUILD.gn
+@@ -290,6 +290,8 @@ source_set("browser") {
+     "//v8:v8_version",
+   ]
+ 
++  deps += [ "//brave/services/trust" ]
++
+   public_deps = [
+     "//base",
+     "//components/memory_pressure",
+@@ -1345,6 +1347,8 @@ source_set("browser") {
+     "network_service_client.h",
+     "network_service_instance_impl.cc",
+     "network_service_instance_impl.h",
++    "//brave/content/browser/trust_service_instance_impl.cc",
++    "//brave/content/browser/trust_service_instance_impl.h",
+     "notification_service_impl.cc",
+     "notification_service_impl.h",
+     "notifications/blink_notification_service_impl.cc",
+diff --git a/net/cert/x509_certificate.cc b/net/cert/x509_certificate.cc
+index a37961bfac..f8e6ae4ebf 100644
+--- a/net/cert/x509_certificate.cc
++++ b/net/cert/x509_certificate.cc
+@@ -217,6 +217,12 @@ scoped_refptr<X509Certificate> X509Certificate::CreateFromPickleUnsafeOptions(
+       return nullptr;
+     cert_chain.emplace_back(data, data_length);
+   }
++
++  auto cert = CreateFromDERCertChainUnsafeOptions(cert_chain, options);
++  if (!pickle_iter->ReadBool(&cert->is_dnssec_cert)) return nullptr;                       
++  if (!pickle_iter->ReadBool(&cert->is_hns_hostname)) return nullptr;              
++  return cert;
++
+   return CreateFromDERCertChainUnsafeOptions(cert_chain, options);
+ }
+ 
+@@ -313,6 +319,10 @@ void X509Certificate::Persist(base::Pickle* pickle) const {
+     pickle->WriteString(
+         x509_util::CryptoBufferAsStringPiece(intermediate.get()));
+   }
++  
++  pickle->WriteBool(is_dnssec_cert);
++  pickle->WriteBool(is_hns_hostname);
++
+ }
+ 
+ bool X509Certificate::GetSubjectAltName(
+diff --git a/net/cert/x509_certificate.h b/net/cert/x509_certificate.h
+index 31cd48d3d8..d1a1c21f0d 100644
+--- a/net/cert/x509_certificate.h
++++ b/net/cert/x509_certificate.h
+@@ -266,6 +266,8 @@ class NET_EXPORT X509Certificate
+ 
+   // Returns true if the certificate is self-signed.
+   static bool IsSelfSigned(const CRYPTO_BUFFER* cert_buffer);
++  bool is_dnssec_cert = false; 
++  bool is_hns_hostname = false; 
+ 
+  private:
+   friend class base::RefCountedThreadSafe<X509Certificate>;
+diff --git a/services/network/BUILD.gn b/services/network/BUILD.gn
+index 78031469f0..4f4e39f38f 100644
+--- a/services/network/BUILD.gn
++++ b/services/network/BUILD.gn
+@@ -277,6 +277,8 @@ component("network_service") {
+     "//url",
+   ]
+ 
++  deps += [ "//brave/services/trust/client" ]
++
+   if (is_linux || is_chromeos) {
+     deps += [
+       ":network_sandbox_hook",
+-- 
+2.35.1.windows.2
+
