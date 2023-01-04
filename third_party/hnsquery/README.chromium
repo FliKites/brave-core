@@ -1,0 +1,8 @@
+Name: hnsquery
+URL: https://github.com/imperviousinc/hnsquery
+License: MPL 2.0
+License File: LICENSE
+Security Critical: no
+
+Beacon ports some patches from Brave mainly for branding. Also, we share a similar directory 
+structure and patching format. 

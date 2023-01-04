@@ -1,7 +1,7 @@
 #include "brave/components/core/bindings/bindings.h"
 #include "brave/components/core/bindings/core_library.h"
 #include "base/threading/thread.h"
-#include "base/task/post_task.h"
+// #include "base/task/post_task.h"
 #include "base/callback.h"
 #include "base/no_destructor.h"
 #include "base/threading/scoped_blocking_call.h"

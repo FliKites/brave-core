@@ -19,12 +19,12 @@ namespace beacon
   {
 
     GrpcClientThread::GrpcClientThread(const std::string &thread_name,
-                                       base::ThreadPriority priority)
+                                       base::ThreadType thread_type)
         : thread_(thread_name)
     {
       base::Thread::Options thread_options = {/*type=*/base::MessagePumpType::IO,
                                               /*size=*/0};
-      thread_options.priority = priority;
+      thread_options.thread_type = thread_type;
       thread_.StartWithOptions(std::move(thread_options));
       StartCQ();
     }
