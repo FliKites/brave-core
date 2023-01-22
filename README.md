@@ -1,4 +1,11 @@
-# Brave Core
+# Brave Core with Beacon Patches
+
+## Credits 
+
+@buffrr @imperviousinc
+
+Source: https://github.com/imperviousinc/beacon
+License: https://github.com/imperviousinc/beacon/blob/main/LICENSE
 
 Brave Core is a set of changes, APIs, and scripts used for customizing Chromium to make the Brave browser. Please also check https://github.com/brave/brave-browser
 
