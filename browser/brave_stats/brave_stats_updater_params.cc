@@ -5,14 +5,12 @@
 
 #include <cmath>
 
-#include "brave/browser/brave_stats/brave_stats_updater_params.h"
-#include "brave/components/brave_referrals/buildflags/buildflags.h"
-
 #include "base/logging.h"
 #include "base/strings/string_util.h"
 #include "base/system/sys_info.h"
 #include "base/threading/thread_restrictions.h"
 #include "base/time/time.h"
+#include "brave/browser/brave_stats/brave_stats_updater_params.h"
 #include "brave/components/brave_ads/common/pref_names.h"
 #include "brave/components/brave_referrals/common/pref_names.h"
 #include "brave/components/brave_wallet/browser/pref_names.h"
@@ -32,10 +30,8 @@ static constexpr base::TimeDelta g_dtoi_delete_delta =
 
 BraveStatsUpdaterParams::BraveStatsUpdaterParams(
     PrefService* stats_pref_service,
-    PrefService* profile_pref_service,
     const ProcessArch arch)
     : BraveStatsUpdaterParams(stats_pref_service,
-                              profile_pref_service,
                               arch,
                               GetCurrentDateAsYMD(),
                               GetCurrentISOWeekNumber(),
@@ -43,13 +39,11 @@ BraveStatsUpdaterParams::BraveStatsUpdaterParams(
 
 BraveStatsUpdaterParams::BraveStatsUpdaterParams(
     PrefService* stats_pref_service,
-    PrefService* profile_pref_service,
     const ProcessArch arch,
     const std::string& ymd,
     int woy,
     int month)
     : stats_pref_service_(stats_pref_service),
-      profile_pref_service_(profile_pref_service),
       arch_(arch),
       ymd_(ymd),
       woy_(woy),
@@ -92,7 +86,7 @@ std::string BraveStatsUpdaterParams::GetReferralCodeParam() const {
 
 std::string BraveStatsUpdaterParams::GetAdsEnabledParam() const {
   return BooleanToString(
-      profile_pref_service_->GetBoolean(ads::prefs::kEnabled));
+      stats_pref_service_->GetBoolean(ads::prefs::kEnabledForLastProfile));
 }
 
 std::string BraveStatsUpdaterParams::GetProcessArchParam() const {
@@ -138,9 +132,7 @@ void BraveStatsUpdaterParams::LoadPrefs() {
     }
   }
 
-#if BUILDFLAG(ENABLE_BRAVE_REFERRALS)
   referral_promo_code_ = stats_pref_service_->GetString(kReferralPromoCode);
-#endif
 }
 
 void BraveStatsUpdaterParams::SavePrefs() {
@@ -165,13 +157,7 @@ std::string BraveStatsUpdaterParams::GetCurrentDateAsYMD() const {
 
 std::string BraveStatsUpdaterParams::GetLastMondayAsYMD() const {
   base::Time now = GetCurrentTimeNow();
-  base::Time::Exploded exploded;
-  now.LocalExplode(&exploded);
-
-  int days_adjusted =
-      (exploded.day_of_week == 0) ? 6 : exploded.day_of_week - 1;
-  base::Time last_monday = base::Time::FromJsTime(
-      now.ToJsTime() - (days_adjusted * base::Time::kMillisecondsPerDay));
+  base::Time last_monday = GetLastMondayTime(now);
 
   return brave_stats::GetDateAsYMD(last_monday);
 }

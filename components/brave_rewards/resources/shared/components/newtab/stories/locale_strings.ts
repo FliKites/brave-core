@@ -14,6 +14,7 @@ export const localeStrings = {
   rewardsContinue: 'Continue',
   rewardsEarning: 'Earning',
   rewardsEarningInfoText: 'The tokens you earn this month will begin processing on $1.',
+  rewardsEnableBraveAds: 'Enable Brave Ads',
   rewardsExchangeValueNote: 'This may vary based on market volatility.',
   rewardsGiving: 'Giving',
   rewardsGrantDaysRemaining: 'You have $1 left to claim',
@@ -35,5 +36,9 @@ export const localeStrings = {
   rewardsSponsoredImageOptInText: 'Earn tokens for viewing this image and support content creators.',
   rewardsStartUsingRewards: 'Start using Rewards',
   rewardsTokenBalance: 'Token Balance',
-  rewardsTokenGrantTitle: 'A token grant is available!'
+  rewardsTokenGrantTitle: 'A token grant is available!',
+  rewardsVBATNoticeTitle1: 'Action required: Connect a custodial account or your vBAT will be lost',
+  rewardsVBATNoticeText1: 'On $1, we will be discontinuing support for existing virtual BAT balances. Connect a custodial account before this date so we can transfer your earned balance to your custodial account, otherwise your balance will be lost.',
+  rewardsVBATNoticeTitle2: 'You still have time to contribute your vBAT to your favorite creators',
+  rewardsVBATNoticeText2: 'On $1, we will be discontinuing support for existing virtual BAT balances. Unfortunately, there are no available custodians in your region ($2) to withdraw your earnings. Until then, you can still contribute to your favorite creators.'
 }

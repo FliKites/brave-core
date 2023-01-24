@@ -1,12 +1,12 @@
 /* Copyright (c) 2019 The Brave Authors. All rights reserved.
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
- * You can obtain one at http://mozilla.org/MPL/2.0/. */
+ * You can obtain one at https://mozilla.org/MPL/2.0/. */
 
 #include "brave/browser/brave_ads/background_helper/background_helper_linux.h"
 
 #include "base/functional/bind.h"
-#include "base/threading/sequenced_task_runner_handle.h"
+#include "base/task/sequenced_task_runner.h"
 #include "chrome/browser/ui/browser.h"
 #include "chrome/browser/ui/browser_list.h"
 #include "chrome/browser/ui/browser_window.h"
@@ -43,13 +43,13 @@ bool BackgroundHelperLinux::IsForeground() const {
 }
 
 void BackgroundHelperLinux::OnBrowserSetLastActive(Browser* browser) {
-  base::SequencedTaskRunnerHandle::Get()->PostTask(
+  base::SequencedTaskRunner::GetCurrentDefault()->PostTask(
       FROM_HERE,
       base::BindOnce(&BackgroundHelperLinux::TriggerOnForeground, AsWeakPtr()));
 }
 
 void BackgroundHelperLinux::OnBrowserNoLongerActive(Browser* browser) {
-  base::SequencedTaskRunnerHandle::Get()->PostTask(
+  base::SequencedTaskRunner::GetCurrentDefault()->PostTask(
       FROM_HERE,
       base::BindOnce(&BackgroundHelperLinux::TriggerOnBackground, AsWeakPtr()));
 }

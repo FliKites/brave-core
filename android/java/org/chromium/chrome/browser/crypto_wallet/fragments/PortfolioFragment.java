@@ -1,18 +1,20 @@
 /* Copyright (c) 2021 The Brave Authors. All rights reserved.
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
- * You can obtain one at http://mozilla.org/MPL/2.0/. */
+ * You can obtain one at https://mozilla.org/MPL/2.0/. */
 
 package org.chromium.chrome.browser.crypto_wallet.fragments;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.ProgressBar;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
@@ -20,7 +22,9 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.cardview.widget.CardView;
 import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.DividerItemDecoration;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -41,12 +45,15 @@ import org.chromium.brave_wallet.mojom.TransactionType;
 import org.chromium.brave_wallet.mojom.TxService;
 import org.chromium.chrome.R;
 import org.chromium.chrome.browser.app.BraveActivity;
+import org.chromium.chrome.browser.app.domain.PortfolioModel;
 import org.chromium.chrome.browser.app.domain.WalletModel;
 import org.chromium.chrome.browser.crypto_wallet.BlockchainRegistryFactory;
 import org.chromium.chrome.browser.crypto_wallet.activities.BraveWalletActivity;
+import org.chromium.chrome.browser.crypto_wallet.activities.NftDetailActivity;
 import org.chromium.chrome.browser.crypto_wallet.adapters.WalletCoinAdapter;
 import org.chromium.chrome.browser.crypto_wallet.listeners.OnWalletListItemClick;
 import org.chromium.chrome.browser.crypto_wallet.observers.ApprovedTxObserver;
+import org.chromium.chrome.browser.crypto_wallet.util.AndroidUtils;
 import org.chromium.chrome.browser.crypto_wallet.util.AssetUtils;
 import org.chromium.chrome.browser.crypto_wallet.util.PendingTxHelper;
 import org.chromium.chrome.browser.crypto_wallet.util.PortfolioHelper;
@@ -57,6 +64,7 @@ import org.chromium.chrome.browser.crypto_wallet.util.WalletUtils;
 import org.chromium.chrome.browser.util.LiveDataUtil;
 import org.chromium.content_public.browser.UiThreadTaskTraits;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -80,6 +88,15 @@ public class PortfolioFragment
     private RecyclerView mRvCoins;
     private WalletCoinAdapter mWalletCoinAdapter;
     private NetworkInfo mNetworkInfo;
+
+    private CardView mNftContainer;
+    private RecyclerView mRvNft;
+    private WalletCoinAdapter mWalletNftAdapter;
+    private TextView mTvNftTitle;
+    private SmoothLineChartEquallySpaced mChartES;
+    private PortfolioModel mPortfolioModel;
+    private ProgressBar mPbAssetDiscovery;
+    private List<PortfolioModel.NftDataModel> mNftDataModels;
 
     public static PortfolioFragment newInstance() {
         return new PortfolioFragment();
@@ -107,35 +124,41 @@ public class PortfolioFragment
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setHasOptionsMenu(true);
+        BraveActivity activity = BraveActivity.getBraveActivity();
+        if (activity != null) {
+            mWalletModel = activity.getWalletModel();
+            mPortfolioModel = mWalletModel.getCryptoModel().getPortfolioModel();
+            mWalletModel.getCryptoModel().getPortfolioModel().discoverAssetsOnAllSupportedChains();
+        }
     }
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
             @Nullable Bundle savedInstanceState) {
-        BraveActivity activity = BraveActivity.getBraveActivity();
-        if (activity != null) {
-            mWalletModel = activity.getWalletModel();
-        }
         View view = inflater.inflate(R.layout.fragment_portfolio, container, false);
         mRvCoins = view.findViewById(R.id.rvCoins);
+        mChartES = view.findViewById(R.id.line_chart);
+        mPbAssetDiscovery = view.findViewById(R.id.frag_port_pb_asset_discovery);
+        mRvCoins.addItemDecoration(
+                new DividerItemDecoration(requireContext(), DividerItemDecoration.VERTICAL));
 
-        view.setOnTouchListener(new View.OnTouchListener() {
+        mChartES.setOnTouchListener(new View.OnTouchListener() {
             @Override
             @SuppressLint("ClickableViewAccessibility")
             public boolean onTouch(View v, MotionEvent event) {
-                SmoothLineChartEquallySpaced chartES = view.findViewById(R.id.line_chart);
-                if (chartES == null) {
+                v.getParent().requestDisallowInterceptTouchEvent(true);
+                if (mChartES == null) {
                     return true;
                 }
                 if (event.getAction() == MotionEvent.ACTION_MOVE
                         || event.getAction() == MotionEvent.ACTION_DOWN) {
-                    chartES.drawLine(event.getRawX(), mBalance);
+                    mChartES.drawLine(event.getRawX(), mBalance);
                 } else if (event.getAction() == MotionEvent.ACTION_UP
                         || event.getAction() == MotionEvent.ACTION_CANCEL) {
                     mBalance.setText(mFiatSumString);
                     mBalance.invalidate();
-                    chartES.drawLine(-1, null);
+                    mChartES.drawLine(-1, null);
                 }
 
                 return true;
@@ -174,12 +197,19 @@ public class PortfolioFragment
                     if (mNetworkInfo != null && !mNetworkInfo.chainId.equals(networkInfo.chainId)) {
                         // clean up list to avoid user clicking on an asset of the previously
                         // selected network after the network has been changed
-                        clearCoinList();
+                        clearAssets();
                     }
                     mNetworkInfo = networkInfo;
                     mBtnChangeNetwork.setText(Utils.getShortNameOfNetwork(networkInfo.chainName));
                     updatePortfolioGetPendingTx();
                 });
+        mPortfolioModel.mNftModels.observe(getViewLifecycleOwner(), nftDataModels -> {
+            if (nftDataModels.isEmpty() || mPortfolioModel.mPortfolioHelper == null) return;
+            mNftDataModels = nftDataModels;
+            setUpNftList(nftDataModels, mPortfolioModel.mPortfolioHelper.getPerTokenCryptoSum(),
+                    mPortfolioModel.mPortfolioHelper.getPerTokenFiatSum());
+        });
+        // Show pending transactions fab to process pending txs
         mWalletModel.getCryptoModel().getPendingTransactions().observe(
                 getViewLifecycleOwner(), transactionInfos -> {
                     mPendingTxs = transactionInfos;
@@ -187,6 +217,15 @@ public class PortfolioFragment
                         mCurrentPendingTx = mPendingTxs.get(0);
                     }
                     updatePendingTxNotification();
+                });
+        mWalletModel.getCryptoModel().getPortfolioModel().mIsDiscoveringUserAssets.observe(
+                getViewLifecycleOwner(), isDiscoveringUserAssets -> {
+                    if (isDiscoveringUserAssets) {
+                        AndroidUtils.show(mPbAssetDiscovery);
+                    } else {
+                        AndroidUtils.gone(mPbAssetDiscovery);
+                        updatePortfolioGetPendingTx();
+                    }
                 });
 
         mWalletModel.getCryptoModel().getNetworkModel().mNeedToCreateAccountForNetwork.observe(
@@ -242,35 +281,7 @@ public class PortfolioFragment
         assert getActivity() != null;
 
         TextView editVisibleAssets = view.findViewById(R.id.edit_visible_assets);
-        editVisibleAssets.setOnClickListener(v -> {
-            JsonRpcService jsonRpcService = getJsonRpcService();
-            assert jsonRpcService != null;
-            NetworkInfo selectedNetwork = null;
-            if (mWalletModel != null) {
-                selectedNetwork =
-                        mWalletModel.getCryptoModel().getNetworkModel().mDefaultNetwork.getValue();
-            }
-            if (selectedNetwork == null) {
-                return;
-            }
-            EditVisibleAssetsBottomSheetDialogFragment bottomSheetDialogFragment =
-                    EditVisibleAssetsBottomSheetDialogFragment.newInstance(
-                            WalletCoinAdapter.AdapterType.EDIT_VISIBLE_ASSETS_LIST);
-
-            bottomSheetDialogFragment.setSelectedNetwork(selectedNetwork);
-            bottomSheetDialogFragment.setDismissListener(
-                    new EditVisibleAssetsBottomSheetDialogFragment.DismissListener() {
-                        @Override
-                        public void onDismiss(Boolean isAssetsListChanged) {
-                            if (isAssetsListChanged != null && isAssetsListChanged) {
-                                updatePortfolioGetPendingTx();
-                            }
-                        }
-                    });
-
-            bottomSheetDialogFragment.show(
-                    getFragmentManager(), EditVisibleAssetsBottomSheetDialogFragment.TAG_FRAGMENT);
-        });
+        editVisibleAssets.setOnClickListener(v -> { onEditVisibleAssetsClick(); });
 
         RadioGroup radioGroup = view.findViewById(R.id.portfolio_duration_radio_group);
         mPreviousCheckedRadioId = radioGroup.getCheckedRadioButtonId();
@@ -283,6 +294,17 @@ public class PortfolioFragment
             mPreviousCheckedRadioId = checkedId;
             updatePortfolioGraph();
         });
+        initNftUi(view);
+    }
+
+    private void initNftUi(View root) {
+        TextView editVisibleNft = root.findViewById(R.id.edit_visible_nfts);
+        mRvNft = root.findViewById(R.id.rv_nft);
+        mRvNft.addItemDecoration(
+                new DividerItemDecoration(requireContext(), DividerItemDecoration.VERTICAL));
+        mNftContainer = root.findViewById(R.id.nft_container);
+        mTvNftTitle = root.findViewById(R.id.tv_nft_title);
+        editVisibleNft.setOnClickListener(v -> { onEditVisibleAssetsClick(); });
     }
 
     private void setUpCoinList(BlockchainToken[] userAssets,
@@ -296,10 +318,30 @@ public class PortfolioFragment
         mRvCoins.setLayoutManager(new LinearLayoutManager(getActivity()));
     }
 
-    private void clearCoinList() {
+    private void setUpNftList(List<PortfolioModel.NftDataModel> nftDataModels,
+            HashMap<String, Double> perTokenCryptoSum, HashMap<String, Double> perTokenFiatSum) {
+        if (nftDataModels.size() == 0) {
+            AndroidUtils.gone(mNftContainer, mTvNftTitle);
+        } else {
+            AndroidUtils.show(mNftContainer, mTvNftTitle);
+        }
+        String tokensPath = BlockchainRegistryFactory.getInstance().getTokensIconsLocation();
+
+        mWalletNftAdapter = Utils.setupVisibleNftAssetList(
+                nftDataModels, perTokenCryptoSum, perTokenFiatSum, tokensPath);
+        mWalletNftAdapter.setOnWalletListItemClick(PortfolioFragment.this);
+        mRvNft.setAdapter(mWalletNftAdapter);
+        mRvNft.setLayoutManager(new LinearLayoutManager(getActivity()));
+    }
+
+    private void clearAssets() {
         if (mWalletCoinAdapter != null) {
             mWalletCoinAdapter.clear();
         }
+        if (mWalletNftAdapter != null) {
+            mWalletNftAdapter.clear();
+        }
+        AndroidUtils.gone(mTvNftTitle, mNftContainer);
     }
 
     @Override
@@ -312,10 +354,25 @@ public class PortfolioFragment
         if (selectedNetwork == null) {
             return;
         }
-        // TODO (Wengling): re-enable when NFT portfolio is done
-        if (asset.isNft) return;
 
-        Utils.openAssetDetailsActivity(getActivity(), selectedNetwork.chainId, asset);
+        if (asset.isErc721 || asset.isNft) {
+            PortfolioModel.NftDataModel selectedNft = null;
+            for (PortfolioModel.NftDataModel nftDataModel : mNftDataModels) {
+                if (nftDataModel.token.tokenId.equals(asset.tokenId)) {
+                    selectedNft = nftDataModel;
+                    break;
+                }
+            }
+            if (selectedNft == null) {
+                return;
+            }
+
+            Intent intent = NftDetailActivity.getIntent(
+                    getContext(), selectedNetwork.chainId, asset, selectedNft);
+            startActivity(intent);
+        } else {
+            Utils.openAssetDetailsActivity(getActivity(), selectedNetwork.chainId, asset);
+        }
     }
 
     private void openNetworkSelection() {
@@ -397,9 +454,8 @@ public class PortfolioFragment
         mPortfolioHelper.setFiatHistoryTimeframe(mCurrentTimeframeType);
         mPortfolioHelper.calculateFiatHistory(() -> {
             PostTask.runOrPostTask(UiThreadTaskTraits.DEFAULT, () -> {
-                SmoothLineChartEquallySpaced chartES = getView().findViewById(R.id.line_chart);
-                chartES.setColors(new int[] {0xFFF73A1C, 0xFFBF14A2, 0xFF6F4CD2});
-                chartES.setData(mPortfolioHelper.getFiatHistory());
+                mChartES.setColors(new int[] {0xFFF73A1C, 0xFFBF14A2, 0xFF6F4CD2});
+                mChartES.setData(mPortfolioHelper.getFiatHistory());
 
                 AdjustTrendControls();
             });
@@ -441,10 +497,24 @@ public class PortfolioFragment
                                         mBalance.setText(mFiatSumString);
                                         mBalance.invalidate();
 
-                                        setUpCoinList(mPortfolioHelper.getUserAssets(),
+                                        List<BlockchainToken> tokens = new ArrayList<>();
+                                        List<BlockchainToken> nfts = new ArrayList<>();
+
+                                        for (BlockchainToken token :
+                                                mPortfolioHelper.getUserAssets()) {
+                                            if (token.isErc721 || token.isNft) {
+                                                nfts.add(token);
+                                            } else {
+                                                tokens.add(token);
+                                            }
+                                        }
+
+                                        setUpCoinList(tokens.toArray(new BlockchainToken[0]),
                                                 mPortfolioHelper.getPerTokenCryptoSum(),
                                                 mPortfolioHelper.getPerTokenFiatSum());
 
+                                        mPortfolioModel.prepareNftListMetaData(
+                                                nfts, mNetworkInfo, mPortfolioHelper);
                                         updatePortfolioGraph();
                                     });
                                 });
@@ -476,6 +546,36 @@ public class PortfolioFragment
         approveTxBottomSheetDialogFragment.setApprovedTxObserver(this);
         approveTxBottomSheetDialogFragment.show(
                 getFragmentManager(), ApproveTxBottomSheetDialogFragment.TAG_FRAGMENT);
+    }
+
+    private void onEditVisibleAssetsClick() {
+        JsonRpcService jsonRpcService = getJsonRpcService();
+        assert jsonRpcService != null;
+        NetworkInfo selectedNetwork = null;
+        if (mWalletModel != null) {
+            selectedNetwork =
+                    mWalletModel.getCryptoModel().getNetworkModel().mDefaultNetwork.getValue();
+        }
+        if (selectedNetwork == null) {
+            return;
+        }
+        EditVisibleAssetsBottomSheetDialogFragment bottomSheetDialogFragment =
+                EditVisibleAssetsBottomSheetDialogFragment.newInstance(
+                        WalletCoinAdapter.AdapterType.EDIT_VISIBLE_ASSETS_LIST);
+
+        bottomSheetDialogFragment.setSelectedNetwork(selectedNetwork);
+        bottomSheetDialogFragment.setDismissListener(
+                new EditVisibleAssetsBottomSheetDialogFragment.DismissListener() {
+                    @Override
+                    public void onDismiss(Boolean isAssetsListChanged) {
+                        if (isAssetsListChanged != null && isAssetsListChanged) {
+                            updatePortfolioGetPendingTx();
+                        }
+                    }
+                });
+
+        bottomSheetDialogFragment.show(
+                getFragmentManager(), EditVisibleAssetsBottomSheetDialogFragment.TAG_FRAGMENT);
     }
 
     private void updateNextPendingTx() {

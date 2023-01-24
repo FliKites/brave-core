@@ -1,7 +1,7 @@
 /* Copyright (c) 2022 The Brave Authors. All rights reserved.
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
- * You can obtain one at http://mozilla.org/MPL/2.0/. */
+ * You can obtain one at https://mozilla.org/MPL/2.0/. */
 
 #include "brave/components/brave_ads/content/browser/search_result_ad/search_result_ad_service.h"
 
@@ -16,7 +16,7 @@
 #include "brave/components/brave_ads/content/browser/search_result_ad/search_result_ad_parsing.h"
 #include "brave/components/brave_search/common/brave_search_utils.h"
 #include "brave/vendor/bat-native-ads/include/bat/ads/public/interfaces/ads.mojom-shared.h"
-#include "content/public/browser/render_frame_host.h"
+#include "content/public/browser/render_frame_host.h"  // IWYU pragma: keep
 #include "services/service_manager/public/cpp/interface_provider.h"
 #include "third_party/blink/public/mojom/document_metadata/document_metadata.mojom.h"
 

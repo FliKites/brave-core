@@ -1,15 +1,15 @@
 /* Copyright (c) 2022 The Brave Authors. All rights reserved.
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
- * You can obtain one at http://mozilla.org/MPL/2.0/. */
+ * You can obtain one at https://mozilla.org/MPL/2.0/. */
 
 #include "bat/ads/ad_type.h"
 #include "bat/ads/confirmation_type.h"
 #include "bat/ads/internal/account/transactions/transactions_unittest_util.h"
 #include "bat/ads/internal/ads/ad_events/ad_event_unittest_util.h"
 #include "bat/ads/internal/ads/serving/permission_rules/permission_rules_unittest_util.h"
-#include "bat/ads/internal/base/unittest/unittest_base.h"
-#include "bat/ads/internal/base/unittest/unittest_mock_util.h"
+#include "bat/ads/internal/common/unittest/unittest_base.h"
+#include "bat/ads/internal/common/unittest/unittest_mock_util.h"
 #include "bat/ads/internal/history/history_unittest_util.h"
 #include "net/http/http_status_code.h"
 
@@ -58,6 +58,9 @@ TEST_F(BatAdsPromotedContentAdIntegrationTest, TriggerViewedEvent) {
 
 TEST_F(BatAdsPromotedContentAdIntegrationTest, TriggerClickedEvent) {
   // Arrange
+  GetAds()->TriggerPromotedContentAdEvent(
+      kPlacementId, kCreativeInstanceIdId,
+      mojom::PromotedContentAdEventType::kViewed);
 
   // Act
   GetAds()->TriggerPromotedContentAdEvent(
@@ -66,9 +69,13 @@ TEST_F(BatAdsPromotedContentAdIntegrationTest, TriggerClickedEvent) {
 
   // Assert
   EXPECT_EQ(1, GetAdEventCount(AdType::kPromotedContentAd,
+                               ConfirmationType::kServed));
+  EXPECT_EQ(1, GetAdEventCount(AdType::kPromotedContentAd,
+                               ConfirmationType::kViewed));
+  EXPECT_EQ(1, GetAdEventCount(AdType::kPromotedContentAd,
                                ConfirmationType::kClicked));
-  EXPECT_EQ(1, GetHistoryItemCount());
-  EXPECT_EQ(1, GetTransactionCount());
+  EXPECT_EQ(2, GetHistoryItemCount());
+  EXPECT_EQ(2, GetTransactionCount());
 }
 
 }  // namespace ads

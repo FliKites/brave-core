@@ -81,6 +81,8 @@ void RewardsService::RegisterProfilePrefs(PrefRegistrySimple* registry) {
   registry->RegisterStringPref(prefs::kParametersMonthlyTipChoices, "");
   registry->RegisterStringPref(prefs::kParametersPayoutStatus, "");
   registry->RegisterDictionaryPref(prefs::kParametersWalletProviderRegions);
+  registry->RegisterTimePref(prefs::kParametersVBatDeadline, base::Time());
+  registry->RegisterBooleanPref(prefs::kParametersVBatExpired, false);
   registry->RegisterBooleanPref(prefs::kFetchOldBalance, true);
   registry->RegisterBooleanPref(prefs::kEmptyBalanceChecked, false);
   registry->RegisterStringPref(prefs::kWalletBrave, "");
@@ -88,6 +90,7 @@ void RewardsService::RegisterProfilePrefs(PrefRegistrySimple* registry) {
   registry->RegisterStringPref(prefs::kWalletBitflyer, "");
   registry->RegisterStringPref(prefs::kWalletGemini, "");
   registry->RegisterBooleanPref(prefs::kDisabledByPolicy, false);
+  registry->RegisterIntegerPref(prefs::kWalletCreationEnvironment, -1);
 }
 
 }  // namespace brave_rewards

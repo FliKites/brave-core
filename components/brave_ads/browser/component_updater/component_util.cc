@@ -1,7 +1,7 @@
 /* Copyright (c) 2020 The Brave Authors. All rights reserved.
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
- * You can obtain one at http://mozilla.org/MPL/2.0/. */
+ * You can obtain one at https://mozilla.org/MPL/2.0/. */
 
 #include "brave/components/brave_ads/browser/component_updater/component_util.h"
 
@@ -10,8 +10,8 @@
 namespace brave_ads {
 
 absl::optional<ComponentInfo> GetComponentInfo(const std::string& id) {
-  const auto iter = components.find(id);
-  if (iter == components.end()) {
+  const auto iter = kComponents.find(id);
+  if (iter == kComponents.end()) {
     return absl::nullopt;
   }
 

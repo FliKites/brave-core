@@ -1,7 +1,7 @@
 /* Copyright (c) 2021 The Brave Authors. All rights reserved.
  * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at https://mozilla.org/MPL/2.0/. */
 
 #ifndef BRAVE_VENDOR_BAT_NATIVE_ADS_SRC_BAT_ADS_INTERNAL_ADS_SERVING_CHOOSE_ELIGIBLE_ADS_PREDICTOR_UTIL_H_
 #define BRAVE_VENDOR_BAT_NATIVE_ADS_SRC_BAT_ADS_INTERNAL_ADS_SERVING_CHOOSE_ELIGIBLE_ADS_PREDICTOR_UTIL_H_
@@ -13,7 +13,7 @@
 #include "bat/ads/internal/ads/serving/eligible_ads/eligible_ads_alias.h"
 #include "bat/ads/internal/ads/serving/eligible_ads/eligible_ads_features.h"
 #include "bat/ads/internal/ads/serving/targeting/top_segments.h"
-#include "bat/ads/internal/base/containers/container_util.h"
+#include "bat/ads/internal/common/containers/container_util.h"
 #include "bat/ads/internal/segments/segment_alias.h"
 
 namespace ads {
@@ -22,7 +22,7 @@ constexpr size_t kDoesMatchIntentChildSegmentsIndex = 0;
 constexpr size_t kDoesMatchIntentParentSegmentsIndex = 1;
 constexpr size_t kDoesMatchInterestChildSegmentsIndex = 2;
 constexpr size_t kDoesMatchInterestParentSegmentsIndex = 3;
-constexpr size_t AdLastSeenHoursAgoIndex = 4;
+constexpr size_t kAdLastSeenHoursAgoIndex = 4;
 constexpr size_t kAdvertiserLastSeenHoursAgoIndex = 5;
 constexpr size_t kPriorityIndex = 6;
 
@@ -120,7 +120,7 @@ double ComputePredictorScore(const AdPredictorInfo<T>& ad_predictor) {
   }
 
   if (ad_predictor.ad_last_seen_hours_ago <= base::Time::kHoursPerDay) {
-    score += weights.at(AdLastSeenHoursAgoIndex) *
+    score += weights.at(kAdLastSeenHoursAgoIndex) *
              ad_predictor.ad_last_seen_hours_ago /
              double{base::Time::kHoursPerDay};
   }

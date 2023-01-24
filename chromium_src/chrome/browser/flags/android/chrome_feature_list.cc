@@ -12,6 +12,7 @@
 #include "brave/components/brave_vpn/common/features.h"
 #include "brave/components/brave_wallet/common/features.h"
 #include "brave/components/debounce/common/features.h"
+#include "brave/components/playlist/common/features.h"
 #include "third_party/blink/public/common/features.h"
 
 // clang-format off
@@ -20,9 +21,11 @@
     &brave_search_conversion::features::kOmniboxBanner,      \
     &brave_today::features::kBraveNewsFeature,               \
     &brave_vpn::features::kBraveVPNLinkSubscriptionAndroidUI,\
+    &brave_today::features::kBraveNewsV2Feature,             \
     &brave_wallet::features::kNativeBraveWalletFeature,      \
     &brave_wallet::features::kBraveWalletSolanaFeature,      \
     &brave_wallet::features::kBraveWalletSnsFeature,         \
+    &playlist::features::kPlaylist,                          \
     &preferences::features::kBraveBackgroundVideoPlayback,   \
     &safe_browsing::features::kBraveAndroidSafeBrowsing,     \
     &debounce::features::kBraveDebounce

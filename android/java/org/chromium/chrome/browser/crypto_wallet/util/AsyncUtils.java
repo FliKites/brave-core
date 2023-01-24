@@ -389,4 +389,45 @@ public class AsyncUtils {
             super.fireResponseCompleteCallback();
         }
     }
+
+    public static abstract class BaseGetNftMetadataContext extends SingleResponseBaseContext {
+        public BlockchainToken asset;
+        public String tokenMetadata;
+        public Integer errorCode;
+        public String errorMessage;
+
+        public BaseGetNftMetadataContext(Runnable responseCompleteCallback) {
+            super(responseCompleteCallback);
+        }
+    }
+
+    public static class GetNftSolanaMetadataContext extends BaseGetNftMetadataContext
+            implements JsonRpcService.GetSolTokenMetadata_Response {
+        public GetNftSolanaMetadataContext(Runnable responseCompleteCallback) {
+            super(responseCompleteCallback);
+        }
+
+        @Override
+        public void call(String tokenMetadata, Integer errorCode, String errorMessage) {
+            this.tokenMetadata = tokenMetadata;
+            this.errorCode = errorCode;
+            this.errorMessage = errorMessage;
+            super.fireResponseCompleteCallback();
+        }
+    }
+
+    public static class GetNftErc721MetadataContext
+            extends BaseGetNftMetadataContext implements JsonRpcService.GetErc721Metadata_Response {
+        public GetNftErc721MetadataContext(Runnable responseCompleteCallback) {
+            super(responseCompleteCallback);
+        }
+
+        @Override
+        public void call(String erc721Metadata, Integer errorCode, String errorMessage) {
+            this.tokenMetadata = erc721Metadata;
+            this.errorCode = errorCode;
+            this.errorMessage = errorMessage;
+            super.fireResponseCompleteCallback();
+        }
+    }
 }

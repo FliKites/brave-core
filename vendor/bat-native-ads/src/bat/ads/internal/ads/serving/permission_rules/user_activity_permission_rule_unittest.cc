@@ -1,14 +1,14 @@
 /* Copyright (c) 2020 The Brave Authors. All rights reserved.
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
- * You can obtain one at http://mozilla.org/MPL/2.0/. */
+ * You can obtain one at https://mozilla.org/MPL/2.0/. */
 
 #include "bat/ads/internal/ads/serving/permission_rules/user_activity_permission_rule.h"
 
 #include <vector>
 
 #include "base/test/scoped_feature_list.h"
-#include "bat/ads/internal/base/unittest/unittest_base.h"
+#include "bat/ads/internal/common/unittest/unittest_base.h"
 #include "bat/ads/internal/user_interaction/user_activity/user_activity_features.h"
 
 // npm run test -- brave_unit_tests --filter=BatAds*
@@ -21,12 +21,12 @@ class BatAdsUserActivityPermissionRuleTest : public UnitTestBase {
     UnitTestBase::SetUp();
 
     base::FieldTrialParams parameters;
-    const char kTriggersParameter[] = "triggers";
-    parameters[kTriggersParameter] = "0D=1.0;0E=1.0;08=1.0";
-    const char kTimeWindowParameter[] = "time_window";
-    parameters[kTimeWindowParameter] = "1h";
-    const char kThresholdParameter[] = "threshold";
-    parameters[kThresholdParameter] = "2.0";
+    const char triggers_parameter[] = "triggers";
+    parameters[triggers_parameter] = "0D=1.0;0E=1.0;08=1.0";
+    const char time_window_parameter[] = "time_window";
+    parameters[time_window_parameter] = "1h";
+    const char threshold_parameter[] = "threshold";
+    parameters[threshold_parameter] = "2.0";
     std::vector<base::test::FeatureRefAndParams> enabled_features;
     enabled_features.emplace_back(user_activity::features::kFeature,
                                   parameters);

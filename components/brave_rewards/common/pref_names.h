@@ -66,12 +66,15 @@ extern const char kParametersTipChoices[];
 extern const char kParametersMonthlyTipChoices[];
 extern const char kParametersPayoutStatus[];
 extern const char kParametersWalletProviderRegions[];
+extern const char kParametersVBatDeadline[];
+extern const char kParametersVBatExpired[];
 extern const char kFetchOldBalance[];  // DEPRECATED
 extern const char kEmptyBalanceChecked[];
 extern const char kWalletBrave[];
 extern const char kWalletUphold[];
 extern const char kWalletBitflyer[];
 extern const char kWalletGemini[];
+extern const char kWalletCreationEnvironment[];
 
 }  // namespace brave_rewards::prefs
 

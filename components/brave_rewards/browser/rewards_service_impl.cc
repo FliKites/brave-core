@@ -32,9 +32,9 @@
 #include "base/strings/stringprintf.h"
 #include "base/strings/utf_string_conversions.h"
 #include "base/task/sequenced_task_runner.h"
+#include "base/task/single_thread_task_runner.h"
 #include "base/task/task_runner_util.h"
 #include "base/task/thread_pool.h"
-#include "base/threading/sequenced_task_runner_handle.h"
 #include "base/time/time.h"
 #include "bat/ledger/global_constants.h"
 #include "bat/ledger/public/ledger_database.h"
@@ -295,7 +295,7 @@ std::vector<std::string> GetISOCountries() {
 
 template <typename Callback, typename... Args>
 void DeferCallback(base::Location location, Callback callback, Args&&... args) {
-  base::SequencedTaskRunnerHandle::Get()->PostTask(
+  base::SequencedTaskRunner::GetCurrentDefault()->PostTask(
       location,
       base::BindOnce(std::move(callback), std::forward<Args>(args)...));
 }
@@ -379,7 +379,7 @@ RewardsServiceImpl::~RewardsServiceImpl() {
 }
 
 void RewardsServiceImpl::ConnectionClosed() {
-  base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
+  base::SingleThreadTaskRunner::GetCurrentDefault()->PostDelayedTask(
       FROM_HERE,
       base::BindOnce(&RewardsServiceImpl::StartLedgerProcessIfNecessary,
                      AsWeakPtr()),
@@ -517,14 +517,8 @@ void RewardsServiceImpl::StartLedgerProcessIfNecessary() {
         base::BindOnce(&RewardsServiceImpl::ConnectionClosed, AsWeakPtr()));
   }
 
-  ledger::mojom::Environment environment = ledger::mojom::Environment::STAGING;
   // Environment
-#if defined(OFFICIAL_BUILD) && BUILDFLAG(IS_ANDROID)
-  environment = GetServerEnvironmentForAndroid();
-#elif defined(OFFICIAL_BUILD)
-  environment = ledger::mojom::Environment::PRODUCTION;
-#endif
-  SetEnvironment(environment);
+  SetEnvironment(GetDefaultServerEnvironment());
 
   SetDebug(false);
 
@@ -587,6 +581,18 @@ void RewardsServiceImpl::CreateRewardsWallet(
 
       auto* prefs = self->profile_->GetPrefs();
       prefs->SetString(prefs::kDeclaredGeo, country);
+
+      // Record in which environment the wallet was created (for display on the
+      // rewards internals page).
+      auto on_get_environment = [](base::WeakPtr<RewardsServiceImpl> self,
+                                   ledger::mojom::Environment environment) {
+        if (self) {
+          self->profile_->GetPrefs()->SetInteger(
+              prefs::kWalletCreationEnvironment, static_cast<int>(environment));
+        }
+      };
+
+      self->GetEnvironment(base::BindOnce(on_get_environment, self));
 
       // After successfully creating a Rewards wallet for the first time,
       // automatically enable Ads and AC.
@@ -656,7 +662,8 @@ void RewardsServiceImpl::GetUserType(
       version = base::Version({1});
     }
 
-    if (version.CompareTo(base::Version({2, 5})) < 0) {
+    if (!prefs->GetBoolean(prefs::kParametersVBatExpired) &&
+        version.CompareTo(base::Version({2, 5})) < 0) {
       std::move(callback).Run(UserType::kLegacyUnconnected);
       return;
     }
@@ -1229,10 +1236,17 @@ void RewardsServiceImpl::GetRewardsParameters(
 void RewardsServiceImpl::OnGetRewardsParameters(
     GetRewardsParametersCallback callback,
     ledger::mojom::RewardsParametersPtr parameters) {
-  if (parameters &&
-      base::FeatureList::IsEnabled(
-          brave_rewards::features::kAllowUnsupportedWalletProvidersFeature)) {
-    parameters->wallet_provider_regions.clear();
+  if (parameters) {
+    if (base::FeatureList::IsEnabled(
+            brave_rewards::features::kAllowUnsupportedWalletProvidersFeature)) {
+      parameters->wallet_provider_regions.clear();
+    }
+
+    // If the user has disabled the "VBAT notice" feature then clear the
+    // corresponding deadline from the returned data.
+    if (!base::FeatureList::IsEnabled(features::kVBatNoticeFeature)) {
+      parameters->vbat_deadline = base::Time();
+    }
   }
 
   std::move(callback).Run(std::move(parameters));
@@ -1608,6 +1622,15 @@ void RewardsServiceImpl::SetValueState(const std::string& name,
 
 base::Value RewardsServiceImpl::GetValueState(const std::string& name) const {
   return profile_->GetPrefs()->GetValue(GetPrefPath(name)).Clone();
+}
+
+void RewardsServiceImpl::SetTimeState(const std::string& name,
+                                      base::Time time) {
+  profile_->GetPrefs()->SetTime(GetPrefPath(name), time);
+}
+
+base::Time RewardsServiceImpl::GetTimeState(const std::string& name) const {
+  return profile_->GetPrefs()->GetTime(GetPrefPath(name));
 }
 
 void RewardsServiceImpl::ClearState(const std::string& name) {
@@ -2352,6 +2375,10 @@ void RewardsServiceImpl::StartMonthlyContributionForTest() {
 }
 
 void RewardsServiceImpl::GetEnvironment(GetEnvironmentCallback callback) {
+  if (!bat_ledger_service_.is_bound()) {
+    return DeferCallback(FROM_HERE, std::move(callback),
+                         GetDefaultServerEnvironment());
+  }
   bat_ledger_service_->GetEnvironment(std::move(callback));
 }
 
@@ -2716,9 +2743,19 @@ void RewardsServiceImpl::OnRecordBackendP3AStatsAC(
                                     auto_contributions);
 }
 
+ledger::mojom::Environment RewardsServiceImpl::GetDefaultServerEnvironment() {
+  ledger::mojom::Environment environment = ledger::mojom::Environment::STAGING;
+#if defined(OFFICIAL_BUILD) && BUILDFLAG(IS_ANDROID)
+  environment = GetDefaultServerEnvironmentForAndroid();
+#elif defined(OFFICIAL_BUILD)
+  environment = ledger::mojom::Environment::PRODUCTION;
+#endif
+  return environment;
+}
+
 #if BUILDFLAG(IS_ANDROID)
 ledger::mojom::Environment
-RewardsServiceImpl::GetServerEnvironmentForAndroid() {
+RewardsServiceImpl::GetDefaultServerEnvironmentForAndroid() {
   auto result = ledger::mojom::Environment::PRODUCTION;
   bool use_staging = false;
   if (profile_ && profile_->GetPrefs()) {

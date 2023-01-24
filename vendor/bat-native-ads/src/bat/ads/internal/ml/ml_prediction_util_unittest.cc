@@ -1,7 +1,7 @@
 /* Copyright (c) 2020 The Brave Authors. All rights reserved.
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
- * You can obtain one at http://mozilla.org/MPL/2.0/. */
+ * You can obtain one at https://mozilla.org/MPL/2.0/. */
 
 #include "bat/ads/internal/ml/ml_prediction_util.h"
 
@@ -9,7 +9,7 @@
 #include <map>
 #include <string>
 
-#include "bat/ads/internal/base/unittest/unittest_base.h"
+#include "bat/ads/internal/common/unittest/unittest_base.h"
 
 // npm run test -- brave_unit_tests --filter=BatAds*
 
@@ -19,7 +19,7 @@ class BatAdsMLPredictionUtilTest : public UnitTestBase {};
 
 TEST_F(BatAdsMLPredictionUtilTest, SoftmaxTest) {
   // Arrange
-  const double kTolerance = 1e-8;
+  const double tolerance = 1e-8;
 
   const std::map<std::string, double> group_1 = {
       {"c1", -1.0}, {"c2", 2.0}, {"c3", 3.0}};
@@ -38,12 +38,12 @@ TEST_F(BatAdsMLPredictionUtilTest, SoftmaxTest) {
   ASSERT_GT(predictions.at("c2"), predictions.at("c1"));
   ASSERT_GT(predictions.at("c1"), 0.0);
   ASSERT_LT(predictions.at("c3"), 1.0);
-  EXPECT_LT(sum - 1.0, kTolerance);
+  EXPECT_LT(sum - 1.0, tolerance);
 }
 
 TEST_F(BatAdsMLPredictionUtilTest, ExtendedSoftmaxTest) {
   // Arrange
-  const double kTolerance = 1e-8;
+  const double tolerance = 1e-8;
 
   const std::map<std::string, double> group_1 = {
       {"c1", 0.0}, {"c2", 1.0}, {"c3", 2.0}};
@@ -57,15 +57,15 @@ TEST_F(BatAdsMLPredictionUtilTest, ExtendedSoftmaxTest) {
 
   // Assert
   ASSERT_LT(std::fabs(predictions_1.at("c1") - predictions_2.at("c1")),
-            kTolerance);
+            tolerance);
   ASSERT_LT(std::fabs(predictions_1.at("c2") - predictions_2.at("c2")),
-            kTolerance);
+            tolerance);
   ASSERT_LT(std::fabs(predictions_1.at("c3") - predictions_2.at("c3")),
-            kTolerance);
+            tolerance);
 
-  EXPECT_TRUE(std::fabs(predictions_1.at("c1") - 0.09003057) < kTolerance &&
-              std::fabs(predictions_1.at("c2") - 0.24472847) < kTolerance &&
-              std::fabs(predictions_1.at("c3") - 0.66524095) < kTolerance);
+  EXPECT_TRUE(std::fabs(predictions_1.at("c1") - 0.09003057) < tolerance &&
+              std::fabs(predictions_1.at("c2") - 0.24472847) < tolerance &&
+              std::fabs(predictions_1.at("c3") - 0.66524095) < tolerance);
 }
 
 }  // namespace ads::ml

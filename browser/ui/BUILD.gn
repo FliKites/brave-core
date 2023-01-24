@@ -10,10 +10,10 @@ import("//brave/components/brave_vpn/common/buildflags/buildflags.gni")
 import("//brave/components/brave_wayback_machine/buildflags/buildflags.gni")
 import("//brave/components/ipfs/buildflags/buildflags.gni")
 import("//brave/components/ntp_background_images/buildflags/buildflags.gni")
-import("//brave/components/playlist/buildflags/buildflags.gni")
+import("//brave/components/playlist/common/buildflags/buildflags.gni")
 import("//brave/components/speedreader/common/buildflags/buildflags.gni")
+import("//brave/components/text_recognition/common/buildflags/buildflags.gni")
 import("//brave/components/tor/buildflags/buildflags.gni")
-import("//brave/components/translate/core/common/buildflags.gni")
 import("//build/config/features.gni")
 import("//chrome/common/features.gni")
 import("//components/gcm_driver/config.gni")
@@ -99,10 +99,14 @@ source_set("ui") {
       "omnibox/brave_omnibox_client_impl.cc",
       "omnibox/brave_omnibox_client_impl.h",
       "session_crashed_bubble_brave.cc",
-      "startup/brave_obsolete_system_infobar_delegate.cc",
-      "startup/brave_obsolete_system_infobar_delegate.h",
+      "toolbar/bookmark_bar_sub_menu_model.cc",
+      "toolbar/bookmark_bar_sub_menu_model.h",
       "toolbar/brave_app_menu_model.cc",
       "toolbar/brave_app_menu_model.h",
+      "toolbar/brave_bookmark_context_menu_controller.cc",
+      "toolbar/brave_bookmark_context_menu_controller.h",
+      "toolbar/brave_bookmark_sub_menu_model.cc",
+      "toolbar/brave_bookmark_sub_menu_model.h",
       "toolbar/brave_recent_tabs_sub_menu_model.h",
       "webui/brave_rewards/rewards_panel_handler.cc",
       "webui/brave_rewards/rewards_panel_handler.h",
@@ -213,6 +217,8 @@ source_set("ui") {
     sources += [
       "views/bookmarks/bookmark_bar_instructions_view.cc",
       "views/bookmarks/bookmark_bar_instructions_view.h",
+      "views/bookmarks/brave_bookmark_context_menu.cc",
+      "views/bookmarks/brave_bookmark_context_menu.h",
       "views/brave_first_run_dialog.cc",
       "views/brave_first_run_dialog.h",
       "views/brave_layout_provider.cc",
@@ -247,6 +253,8 @@ source_set("ui") {
       "views/omnibox/brave_omnibox_popup_contents_view.h",
       "views/omnibox/brave_omnibox_result_view.cc",
       "views/omnibox/brave_omnibox_result_view.h",
+      "views/omnibox/brave_omnibox_view_views.cc",
+      "views/omnibox/brave_omnibox_view_views.h",
       "views/omnibox/brave_rounded_omnibox_results_frame.cc",
       "views/omnibox/brave_rounded_omnibox_results_frame.h",
       "views/omnibox/brave_search_conversion_promotion_view.cc",
@@ -340,6 +348,21 @@ source_set("ui") {
     ]
   }
 
+  # brave's obsolete infobar is only used on Windows now.
+  if (is_win) {
+    sources += [
+      "startup/brave_obsolete_system_infobar_delegate.cc",
+      "startup/brave_obsolete_system_infobar_delegate.h",
+    ]
+
+    if (toolkit_views) {
+      sources += [
+        "views/obsolete_system_confirm_dialog_view.cc",
+        "views/obsolete_system_confirm_dialog_view.h",
+      ]
+    }
+  }
+
   if (is_linux) {
     sources += [
       "views/brave_views_delegate_linux.cc",
@@ -390,8 +413,9 @@ source_set("ui") {
     "//brave/components/ntp_background_images/common",
     "//brave/components/ntp_widget_utils/browser",
     "//brave/components/p3a:buildflags",
-    "//brave/components/playlist/buildflags",
+    "//brave/components/playlist/common/buildflags",
     "//brave/components/resources:static_resources",
+    "//brave/components/text_recognition/common/buildflags",
     "//brave/components/time_period_storage",
     "//brave/components/tor/buildflags",
     "//brave/components/vector_icons",
@@ -429,6 +453,17 @@ source_set("ui") {
       "//brave/browser/ui/views/infobars",
       "//brave/components/brave_shields/common:common",
     ]
+  }
+
+  if (enable_text_recognition) {
+    sources += [
+      "views/text_recognition_dialog_tracker.cc",
+      "views/text_recognition_dialog_tracker.h",
+      "views/text_recognition_dialog_view.cc",
+      "views/text_recognition_dialog_view.h",
+    ]
+
+    deps += [ "//brave/components/text_recognition/browser" ]
   }
 
   # This is no longer compiled into Chromium on Android, but we still
@@ -581,6 +616,8 @@ source_set("ui") {
       "views/location_bar/brave_star_view.h",
       "views/profiles/brave_avatar_toolbar_button.cc",
       "views/profiles/brave_avatar_toolbar_button.h",
+      "views/profiles/brave_avatar_toolbar_button_delegate.cc",
+      "views/profiles/brave_avatar_toolbar_button_delegate.h",
       "views/tabs/brave_new_tab_button.cc",
       "views/tabs/brave_new_tab_button.h",
       "views/tabs/brave_tab_search_button.cc",
@@ -588,6 +625,10 @@ source_set("ui") {
       "views/toolbar/brave_toolbar_view.cc",
       "views/toolbar/brave_toolbar_view.h",
     ]
+
+    if (is_mac) {
+      sources += [ "views/frame/vertical_tab_strip_region_view_mac.mm" ]
+    }
 
     if (enable_extensions) {
       sources += [
@@ -749,14 +790,12 @@ source_set("ui") {
 
   if (enable_playlist_webui) {
     sources += [
-      "webui/playlist_page_handler.cc",
-      "webui/playlist_page_handler.h",
       "webui/playlist_ui.cc",
       "webui/playlist_ui.h",
     ]
     deps += [
-      "//brave/components/playlist/mojom",
-      "//brave/components/playlist/resources:generated_resources",
+      "//brave/components/playlist/browser",
+      "//brave/components/playlist/browser/resources:generated_resources",
     ]
   }
 
@@ -780,16 +819,22 @@ source_set("browser_tests") {
     ]
 
     deps = [
+      "//brave/app:command_ids",
       "//brave/browser/ui",
       "//brave/components/constants",
       "//chrome/browser",
       "//chrome/browser/devtools:test_support",
       "//chrome/browser/profiles:profile",
       "//chrome/browser/ui",
+      "//chrome/test:test_support",
       "//chrome/test:test_support_ui",
       "//components/javascript_dialogs",
       "//components/prefs",
       "//content/test:test_support",
     ]
+
+    if (enable_text_recognition) {
+      sources += [ "text_recognition_browsertest.cc" ]
+    }
   }
 }

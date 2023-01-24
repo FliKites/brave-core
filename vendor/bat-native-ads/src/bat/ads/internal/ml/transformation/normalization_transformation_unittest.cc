@@ -1,14 +1,14 @@
 /* Copyright (c) 2020 The Brave Authors. All rights reserved.
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
- * You can obtain one at http://mozilla.org/MPL/2.0/. */
+ * You can obtain one at https://mozilla.org/MPL/2.0/. */
 
 #include "bat/ads/internal/ml/transformation/normalization_transformation.h"
 
 #include <string>
 #include <vector>
 
-#include "bat/ads/internal/base/unittest/unittest_base.h"
+#include "bat/ads/internal/common/unittest/unittest_base.h"
 #include "bat/ads/internal/ml/data/text_data.h"
 #include "bat/ads/internal/ml/data/vector_data.h"
 #include "bat/ads/internal/ml/ml_alias.h"
@@ -23,10 +23,10 @@ class BatAdsNormalizationTransformationTest : public UnitTestBase {};
 
 TEST_F(BatAdsNormalizationTransformationTest, NormalizationTest) {
   // Arrange
-  const double kTolerance = 1e-7;
+  const double tolerance = 1e-7;
 
-  const std::string kTestString = "quite a small test string";
-  std::unique_ptr<Data> data = std::make_unique<TextData>(kTestString);
+  const std::string test_string = "quite a small test string";
+  std::unique_ptr<Data> data = std::make_unique<TextData>(test_string);
 
   const HashedNGramsTransformation hashed_ngrams(10, std::vector<int>{3, 4});
   const NormalizationTransformation normalization;
@@ -52,14 +52,14 @@ TEST_F(BatAdsNormalizationTransformationTest, NormalizationTest) {
     ASSERT_TRUE(x >= 0.0);
     ASSERT_TRUE(x <= 1.0);
   }
-  EXPECT_TRUE(std::fabs(s - 1.0) < kTolerance);
+  EXPECT_TRUE(std::fabs(s - 1.0) < tolerance);
 }
 
 TEST_F(BatAdsNormalizationTransformationTest, ChainingTest) {
   // Arrange
-  const int kDefaultBucketCount = 10'000;
-  const size_t kExpectedElementCount = 10;
-  const std::string kTestString = "TINY";
+  const int default_bucket_count = 10'000;
+  const size_t expected_element_count = 10;
+  const std::string test_string = "TINY";
 
   TransformationVector chain;
 
@@ -69,7 +69,7 @@ TEST_F(BatAdsNormalizationTransformationTest, ChainingTest) {
 
   chain.push_back(std::make_unique<NormalizationTransformation>());
 
-  std::unique_ptr<Data> data = std::make_unique<TextData>(kTestString);
+  std::unique_ptr<Data> data = std::make_unique<TextData>(test_string);
 
   // Act
   for (auto& entry : chain) {
@@ -81,10 +81,10 @@ TEST_F(BatAdsNormalizationTransformationTest, ChainingTest) {
   ASSERT_TRUE(vector_data);
 
   // Assert
-  ASSERT_EQ(kDefaultBucketCount, vector_data->GetDimensionCount());
+  ASSERT_EQ(default_bucket_count, vector_data->GetDimensionCount());
 
   // Hashes for [t, i, n, y, ti, in, ny, tin, iny, tiny] -- 10 in total
-  EXPECT_EQ(kExpectedElementCount, vector_data->GetValuesForTesting().size());
+  EXPECT_EQ(expected_element_count, vector_data->GetValuesForTesting().size());
 }
 
 }  // namespace ads::ml

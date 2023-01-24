@@ -1,7 +1,7 @@
 /* Copyright (c) 2022 The Brave Authors. All rights reserved.
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
- * You can obtain one at http://mozilla.org/MPL/2.0/. */
+ * You can obtain one at https://mozilla.org/MPL/2.0/. */
 
 #include "bat/ads/internal/ads/serving/permission_rules/permission_rule_features.h"
 
@@ -44,10 +44,10 @@ TEST(BatAdsPermissionRuleFeaturesTest, IsDisabled) {
 
 TEST(BatAdsPermissionRuleFeaturesTest, ShouldOnlyServeAdsInWindowedMode) {
   // Arrange
-  base::FieldTrialParams kParameters;
-  kParameters["should_only_serve_ads_in_windowed_mode"] = "false";
+  base::FieldTrialParams parameters;
+  parameters["should_only_serve_ads_in_windowed_mode"] = "false";
   std::vector<base::test::FeatureRefAndParams> enabled_features;
-  enabled_features.emplace_back(kFeature, kParameters);
+  enabled_features.emplace_back(kFeature, parameters);
 
   const std::vector<base::test::FeatureRef> disabled_features;
 
@@ -109,10 +109,10 @@ TEST(BatAdsPermissionRuleFeaturesTest, ShouldExcludeAdIfConvertedWhenDisable) {
 TEST(BatAdsPermissionRuleFeaturesTest,
      ShouldOnlyServeAdsWithValidInternetConnection) {
   // Arrange
-  base::FieldTrialParams kParameters;
-  kParameters["should_only_serve_ads_with_valid_internet_connection"] = "false";
+  base::FieldTrialParams parameters;
+  parameters["should_only_serve_ads_with_valid_internet_connection"] = "false";
   std::vector<base::test::FeatureRefAndParams> enabled_features;
-  enabled_features.emplace_back(kFeature, kParameters);
+  enabled_features.emplace_back(kFeature, parameters);
 
   const std::vector<base::test::FeatureRef> disabled_features;
 
@@ -177,10 +177,10 @@ TEST(BatAdsPermissionRuleFeaturesTest,
 
 TEST(BatAdsPermissionRuleFeaturesTest, ShouldOnlyServeAdsIfMediaIsNotPlaying) {
   // Arrange
-  base::FieldTrialParams kParameters;
-  kParameters["should_only_serve_ads_if_media_is_not_playing"] = "false";
+  base::FieldTrialParams parameters;
+  parameters["should_only_serve_ads_if_media_is_not_playing"] = "false";
   std::vector<base::test::FeatureRefAndParams> enabled_features;
-  enabled_features.emplace_back(kFeature, kParameters);
+  enabled_features.emplace_back(kFeature, parameters);
 
   const std::vector<base::test::FeatureRef> disabled_features;
 
@@ -242,10 +242,10 @@ TEST(BatAdsPermissionRuleFeaturesTest,
 
 TEST(BatAdsPermissionRuleFeaturesTest, ShouldOnlyServeAdsIfBrowserIsActive) {
   // Arrange
-  base::FieldTrialParams kParameters;
-  kParameters["should_only_serve_ads_if_browser_is_active"] = "false";
+  base::FieldTrialParams parameters;
+  parameters["should_only_serve_ads_if_browser_is_active"] = "false";
   std::vector<base::test::FeatureRefAndParams> enabled_features;
-  enabled_features.emplace_back(kFeature, kParameters);
+  enabled_features.emplace_back(kFeature, parameters);
 
   const std::vector<base::test::FeatureRef> disabled_features;
 

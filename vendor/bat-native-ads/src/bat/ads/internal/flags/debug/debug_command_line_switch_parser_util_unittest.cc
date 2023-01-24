@@ -1,15 +1,15 @@
 /* Copyright (c) 2022 The Brave Authors. All rights reserved.
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
- * You can obtain one at http://mozilla.org/MPL/2.0/. */
+ * You can obtain one at https://mozilla.org/MPL/2.0/. */
 
 #include <string>
 
 #include "base/strings/stringprintf.h"
-#include "bat/ads/internal/base/unittest/command_line_switch_info.h"
-#include "bat/ads/internal/base/unittest/unittest_base.h"
-#include "bat/ads/internal/base/unittest/unittest_command_line_switch_util.h"
-#include "bat/ads/internal/flags/flag_manager_util.h"
+#include "bat/ads/internal/common/unittest/command_line_switch_info.h"
+#include "bat/ads/internal/common/unittest/unittest_base.h"
+#include "bat/ads/internal/common/unittest/unittest_command_line_switch_util.h"
+#include "bat/ads/internal/flags/flag_manager.h"
 
 // npm run test -- brave_unit_tests --filter=BatAds*
 
@@ -22,15 +22,16 @@ constexpr char kRewardsSwitch[] = "rewards";
 struct ParamInfo final {
   CommandLineSwitchInfo command_line_switch;
   bool expected_should_debug;
-} kTests[] = {{/*command_line_switch*/ {kRewardsSwitch, "debug=true"},
-               /*expected_should_debug*/ true},
-              {/*command_line_switch*/ {kRewardsSwitch, "debug=1"},
-               /*expected_should_debug*/ true},
-              {/*command_line_switch*/ {kRewardsSwitch, "debug=false"},
-               /*expected_should_debug*/ false},
-              {/*command_line_switch*/ {kRewardsSwitch, "debug=foobar"},
-               /*expected_should_debug*/ false},
-              {/*command_line_switch */ {}, /* expected_should_debug*/ false}};
+} g_k_tests[] = {
+    {/*command_line_switch*/ {kRewardsSwitch, "debug=true"},
+     /*expected_should_debug*/ true},
+    {/*command_line_switch*/ {kRewardsSwitch, "debug=1"},
+     /*expected_should_debug*/ true},
+    {/*command_line_switch*/ {kRewardsSwitch, "debug=false"},
+     /*expected_should_debug*/ false},
+    {/*command_line_switch*/ {kRewardsSwitch, "debug=foobar"},
+     /*expected_should_debug*/ false},
+    {/*command_line_switch */ {}, /* expected_should_debug*/ false}};
 
 }  // namespace
 
@@ -50,7 +51,8 @@ TEST_P(BatAdsDebugCommandLineSwitchParserUtilTest,
   // Act
 
   // Assert
-  EXPECT_EQ(GetParam().expected_should_debug, ShouldDebug());
+  EXPECT_EQ(GetParam().expected_should_debug,
+            FlagManager::GetInstance()->ShouldDebug());
 }
 
 std::string TestParamToString(
@@ -67,7 +69,7 @@ std::string TestParamToString(
 
 INSTANTIATE_TEST_SUITE_P(,
                          BatAdsDebugCommandLineSwitchParserUtilTest,
-                         testing::ValuesIn(kTests),
+                         testing::ValuesIn(g_k_tests),
                          TestParamToString);
 
 }  // namespace ads

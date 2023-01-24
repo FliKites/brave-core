@@ -1,7 +1,7 @@
 /* Copyright (c) 2021 The Brave Authors. All rights reserved.
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
- * You can obtain one at http://mozilla.org/MPL/2.0/. */
+ * You can obtain one at https://mozilla.org/MPL/2.0/. */
 
 #include "bat/ads/internal/ads/serving/choose/eligible_ads_predictor_util.h"
 
@@ -69,14 +69,13 @@ TEST(BatAdsEligibleAdsPredictorUtilTest,
 TEST(BatAdsEligibleAdsPredictorUtilTest,
      ComputePredictorScoreWithZeroWeightsNotAllowedByGriffin) {
   // Arrange
-  const char kAdFeatureWeights[] = "ad_predictor_weights";
-  std::map<std::string, std::string> kEligibleAdsParameters;
-  kEligibleAdsParameters[kAdFeatureWeights] =
+  std::map<std::string, std::string> eligible_ads_parameters;
+  eligible_ads_parameters["ad_predictor_weights"] =
       "0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0";
 
   base::test::ScopedFeatureList scoped_feature_list;
   scoped_feature_list.InitWithFeaturesAndParameters(
-      {{features::kEligibleAds, kEligibleAdsParameters}}, {});
+      {{features::kEligibleAds, eligible_ads_parameters}}, {});
 
   CreativeNotificationAdInfo creative_ad = BuildCreativeNotificationAd();
   creative_ad.segment = "foo-bar";

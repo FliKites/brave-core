@@ -1,7 +1,7 @@
 /* Copyright (c) 2022 The Brave Authors. All rights reserved.
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
- * You can obtain one at http://mozilla.org/MPL/2.0/. */
+ * You can obtain one at https://mozilla.org/MPL/2.0/. */
 
 #include "bat/ads/internal/ads/ad_events/search_result_ads/search_result_ad_event_handler.h"
 
@@ -18,7 +18,7 @@
 #include "bat/ads/internal/ads/ad_events/ad_events_database_table.h"
 #include "bat/ads/internal/ads/ad_events/search_result_ads/search_result_ad_event_factory.h"
 #include "bat/ads/internal/ads/serving/permission_rules/search_result_ads/search_result_ad_permission_rules.h"
-#include "bat/ads/internal/base/logging_util.h"
+#include "bat/ads/internal/common/logging_util.h"
 #include "bat/ads/internal/conversions/conversion_builder.h"
 #include "bat/ads/internal/conversions/conversion_info.h"
 #include "bat/ads/internal/conversions/conversions_database_table.h"
@@ -30,22 +30,45 @@ namespace ads::search_result_ads {
 
 namespace {
 
+bool ShouldDebounceViewedAdEvent(
+    const AdInfo& ad,
+    const AdEventList& ad_events,
+    const mojom::SearchResultAdEventType& event_type) {
+  DCHECK(mojom::IsKnownEnumValue(event_type));
+
+  return event_type == mojom::SearchResultAdEventType::kViewed &&
+         HasFiredAdEvent(ad, ad_events, ConfirmationType::kViewed);
+}
+
+bool ShouldDebounceClickedAdEvent(
+    const AdInfo& ad,
+    const AdEventList& ad_events,
+    const mojom::SearchResultAdEventType& event_type) {
+  DCHECK(mojom::IsKnownEnumValue(event_type));
+
+  return event_type == mojom::SearchResultAdEventType::kClicked &&
+         HasFiredAdEvent(ad, ad_events, ConfirmationType::kClicked);
+}
+
+bool IsAdPlaced(const AdInfo& ad,
+                const AdEventList& ad_events,
+                const mojom::SearchResultAdEventType& event_type) {
+  DCHECK(mojom::IsKnownEnumValue(event_type));
+
+  return event_type == mojom::SearchResultAdEventType::kServed ||
+         event_type == mojom::SearchResultAdEventType::kViewed ||
+         (HasFiredAdEvent(ad, ad_events, ConfirmationType::kServed) &&
+          HasFiredAdEvent(ad, ad_events, ConfirmationType::kViewed));
+}
+
 bool ShouldDebounceAdEvent(const AdInfo& ad,
                            const AdEventList& ad_events,
                            const mojom::SearchResultAdEventType& event_type) {
   DCHECK(mojom::IsKnownEnumValue(event_type));
 
-  if (event_type == mojom::SearchResultAdEventType::kViewed &&
-      HasFiredAdEvent(ad, ad_events, ConfirmationType::kViewed)) {
-    return true;
-  }
-
-  if (event_type == mojom::SearchResultAdEventType::kClicked &&
-      HasFiredAdEvent(ad, ad_events, ConfirmationType::kClicked)) {
-    return true;
-  }
-
-  return false;
+  return ShouldDebounceViewedAdEvent(ad, ad_events, event_type) ||
+         ShouldDebounceClickedAdEvent(ad, ad_events, event_type) ||
+         !IsAdPlaced(ad, ad_events, event_type);
 }
 
 }  // namespace
@@ -180,7 +203,7 @@ void EventHandler::OnSaveConversions(const SearchResultAdInfo& ad,
         }
 
         if (ShouldDebounceAdEvent(ad, ad_events, event_type)) {
-          BLOG(1, "Search result ad: Not allowed as already fired "
+          BLOG(1, "Search result ad: Not allowed as debounced "
                       << event_type << " event for this placement id "
                       << ad.placement_id);
           FailedToFireEvent(ad, event_type, callback);
@@ -212,7 +235,7 @@ void EventHandler::FireClickedEvent(
         }
 
         if (ShouldDebounceAdEvent(ad, ad_events, event_type)) {
-          BLOG(1, "Search result ad: Not allowed as already fired "
+          BLOG(1, "Search result ad: Not allowed as debounced "
                       << event_type << " event for this placement id "
                       << ad.placement_id);
           FailedToFireEvent(ad, event_type, callback);

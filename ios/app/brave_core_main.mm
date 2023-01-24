@@ -29,6 +29,7 @@
 #include "brave/ios/browser/api/brave_stats/brave_stats+private.h"
 #include "brave/ios/browser/api/brave_wallet/brave_wallet_api+private.h"
 #include "brave/ios/browser/api/history/brave_history_api+private.h"
+#include "brave/ios/browser/api/ipfs/ipfs_api+private.h"
 #include "brave/ios/browser/api/opentabs/brave_opentabs_api+private.h"
 #include "brave/ios/browser/api/opentabs/brave_sendtab_api+private.h"
 #include "brave/ios/browser/api/opentabs/brave_tabgenerator_api+private.h"
@@ -91,7 +92,9 @@ const BraveCoreLogSeverity BraveCoreLogSeverityVerbose =
   std::unique_ptr<const char*[]> _raw_args;
   std::unique_ptr<web::WebMain> _webMain;
   std::unique_ptr<Browser> _browser;
+  std::unique_ptr<Browser> _otr_browser;
   BrowserList* _browserList;
+  BrowserList* _otr_browserList;
   ChromeBrowserState* _mainBrowserState;
   scoped_refptr<brave::BraveP3AService> _p3a_service;
   scoped_refptr<brave::HistogramsBraveizer> _histogram_braveizer;
@@ -105,6 +108,7 @@ const BraveCoreLogSeverity BraveCoreLogSeverityVerbose =
 @property(nonatomic) BraveSyncProfileServiceIOS* syncProfileService;
 @property(nonatomic) BraveTabGeneratorAPI* tabGeneratorAPI;
 @property(nonatomic) BraveWalletAPI* braveWalletAPI;
+@property(nonatomic) IpfsAPI* ipfsAPI;
 @end
 
 @implementation BraveCoreMain
@@ -198,9 +202,18 @@ const BraveCoreLogSeverity BraveCoreLogSeverityVerbose =
         browserStateManager->GetLastUsedBrowserState();
     _mainBrowserState = chromeBrowserState;
 
+    // Setup main browser
     _browserList = BrowserListFactory::GetForBrowserState(_mainBrowserState);
     _browser = Browser::Create(_mainBrowserState);
     _browserList->AddBrowser(_browser.get());
+
+    // Setup otr browser
+    ChromeBrowserState* otrChromeBrowserState =
+        chromeBrowserState->GetOffTheRecordChromeBrowserState();
+    _otr_browserList =
+        BrowserListFactory::GetForBrowserState(otrChromeBrowserState);
+    _otr_browser = Browser::Create(otrChromeBrowserState);
+    _otr_browserList->AddIncognitoBrowser(_otr_browser.get());
 
     // Initialize the provider UI global state.
     ios::provider::InitializeUI();
@@ -229,6 +242,14 @@ const BraveCoreLogSeverity BraveCoreLogSeverityVerbose =
   _syncProfileService = nil;
   _syncAPI = nil;
   _tabGeneratorAPI = nil;
+
+  _otr_browserList =
+      BrowserListFactory::GetForBrowserState(_otr_browser->GetBrowserState());
+  [_otr_browser->GetCommandDispatcher() prepareForShutdown];
+  _otr_browserList->RemoveBrowser(_otr_browser.get());
+  _otr_browser->GetWebStateList()->CloseAllWebStates(
+      WebStateList::CLOSE_NO_FLAGS);
+  _otr_browser.reset();
 
   _browserList =
       BrowserListFactory::GetForBrowserState(_browser->GetBrowserState());
@@ -415,6 +436,13 @@ static bool CustomLogHandler(int severity,
 
 - (BraveStats*)braveStats {
   return [[BraveStats alloc] initWithBrowserState:_mainBrowserState];
+}
+
+- (IpfsAPI*)ipfsAPI {
+  if (!_ipfsAPI) {
+    _ipfsAPI = [[IpfsAPI alloc] initWithBrowserState:_mainBrowserState];
+  }
+  return _ipfsAPI;
 }
 
 - (void)initializeP3AServiceForChannel:(NSString*)channel

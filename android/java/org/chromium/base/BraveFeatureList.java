@@ -8,6 +8,7 @@ package org.chromium.base;
 public abstract class BraveFeatureList {
     public static final String NATIVE_BRAVE_WALLET = "NativeBraveWallet";
     public static final String BRAVE_NEWS = "BraveNews";
+    public static final String BRAVE_NEWS_V2 = "BraveNewsV2";
     public static final String USE_DEV_UPDATER_URL = "UseDevUpdaterUrl";
     public static final String FORCE_WEB_CONTENTS_DARK_MODE = "WebContentsForceDark";
     public static final String ENABLE_FORCE_DARK = "enable-force-dark";
@@ -21,4 +22,5 @@ public abstract class BraveFeatureList {
     public static final String BRAVE_VPN_LINK_SUBSCRIPTION_ANDROID_UI =
             "BraveVPNLinkSubscriptionAndroidUI";
     public static final String DEBOUNCE = "BraveDebounce";
+    public static final String BRAVE_PLAYLIST = "Playlist";
 }

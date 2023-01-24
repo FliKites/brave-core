@@ -23,6 +23,7 @@
 #include "base/one_shot_event.h"
 #include "base/sequence_checker.h"
 #include "base/threading/sequence_bound.h"
+#include "base/time/time.h"
 #include "base/values.h"
 #include "bat/ledger/ledger.h"
 #include "bat/ledger/ledger_client.h"
@@ -76,8 +77,6 @@ namespace brave_rewards {
 class RewardsNotificationServiceImpl;
 class RewardsBrowserTest;
 
-using GetEnvironmentCallback =
-    base::OnceCallback<void(ledger::mojom::Environment)>;
 using GetDebugCallback = base::OnceCallback<void(bool)>;
 using GetReconcileIntervalCallback = base::OnceCallback<void(int32_t)>;
 using GetGeminiRetriesCallback = base::OnceCallback<void(int32_t)>;
@@ -207,10 +206,10 @@ class RewardsServiceImpl : public RewardsService,
   RewardsNotificationService* GetNotificationService() const override;
   void GetRewardsInternalsInfo(
       GetRewardsInternalsInfoCallback callback) override;
+  void GetEnvironment(GetEnvironmentCallback callback) override;
 
   void HandleFlags(const RewardsFlags& flags);
   void SetEnvironment(ledger::mojom::Environment environment);
-  void GetEnvironment(GetEnvironmentCallback callback);
   void SetDebug(bool debug);
   void GetDebug(GetDebugCallback callback);
   void SetGeminiRetries(const int32_t retries);
@@ -489,6 +488,8 @@ class RewardsServiceImpl : public RewardsService,
   uint64_t GetUint64State(const std::string& name) const override;
   void SetValueState(const std::string& name, base::Value value) override;
   base::Value GetValueState(const std::string& name) const override;
+  void SetTimeState(const std::string& name, base::Time time) override;
+  base::Time GetTimeState(const std::string& name) const override;
   void ClearState(const std::string& name) override;
 
   bool GetBooleanOption(const std::string& name) const override;
@@ -595,8 +596,10 @@ class RewardsServiceImpl : public RewardsService,
   static void OnGetRewardsParameters(GetRewardsParametersCallback,
                                      ledger::mojom::RewardsParametersPtr);
 
+  ledger::mojom::Environment GetDefaultServerEnvironment();
+
 #if BUILDFLAG(IS_ANDROID)
-  ledger::mojom::Environment GetServerEnvironmentForAndroid();
+  ledger::mojom::Environment GetDefaultServerEnvironmentForAndroid();
   safetynet_check::SafetyNetCheckRunner safetynet_check_runner_;
 #endif
 

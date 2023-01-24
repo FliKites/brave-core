@@ -16,7 +16,7 @@
 #include "brave/browser/brave_stats/switches.h"
 #include "brave/common/brave_channel_info.h"
 #include "brave/components/brave_ads/common/pref_names.h"
-#include "brave/components/brave_referrals/buildflags/buildflags.h"
+#include "brave/components/brave_referrals/common/pref_names.h"
 #include "brave/components/brave_stats/browser/brave_stats_updater_util.h"
 #include "brave/components/brave_wallet/browser/pref_names.h"
 #include "brave/components/constants/network_constants.h"
@@ -25,7 +25,6 @@
 #include "brave/components/version_info/version_info.h"
 #include "chrome/browser/browser_process.h"
 #include "chrome/browser/net/system_network_context_manager.h"
-#include "chrome/browser/profiles/profile_manager.h"
 #include "chrome/common/channel_info.h"
 #include "components/prefs/pref_change_registrar.h"
 #include "components/prefs/pref_registry_simple.h"
@@ -38,10 +37,6 @@
 #include "services/network/public/cpp/resource_request.h"
 #include "services/network/public/cpp/simple_url_loader.h"
 #include "services/network/public/mojom/fetch_api.mojom-shared.h"
-
-#if BUILDFLAG(ENABLE_BRAVE_REFERRALS)
-#include "brave/components/brave_referrals/common/pref_names.h"
-#endif
 
 namespace brave_stats {
 
@@ -96,9 +91,7 @@ net::NetworkTrafficAnnotationTag AnonymousStatsAnnotation() {
 }  // anonymous namespace
 
 BraveStatsUpdater::BraveStatsUpdater(PrefService* pref_service)
-    : pref_service_(pref_service),
-      testing_url_loader_factory_(nullptr),
-      testing_profile_prefs_(nullptr) {
+    : pref_service_(pref_service), testing_url_loader_factory_(nullptr) {
   const base::CommandLine& command_line =
       *base::CommandLine::ForCurrentProcess();
   if (command_line.HasSwitch(switches::kBraveStatsUpdaterServer)) {
@@ -110,22 +103,10 @@ BraveStatsUpdater::BraveStatsUpdater(PrefService* pref_service)
     usage_server_ = BUILDFLAG(BRAVE_USAGE_SERVER);
   }
 
-  // Track initial profile creation
-  if (g_browser_process->profile_manager()) {
-    profile_manager_observer_.Observe(g_browser_process->profile_manager());
-    DCHECK_EQ(0U,
-              g_browser_process->profile_manager()->GetLoadedProfiles().size());
-  }
+  Start();
 }
 
 BraveStatsUpdater::~BraveStatsUpdater() = default;
-
-void BraveStatsUpdater::OnProfileAdded(Profile* profile) {
-  if (profile == ProfileManager::GetPrimaryUserProfile()) {
-    profile_manager_observer_.Reset();
-    Start();
-  }
-}
 
 void BraveStatsUpdater::Start() {
   // Startup timer, only initiated once we've checked for a promo
@@ -187,13 +168,6 @@ network::mojom::URLLoaderFactory* BraveStatsUpdater::GetURLLoaderFactory() {
       ->GetURLLoaderFactory();
 }
 
-PrefService* BraveStatsUpdater::GetProfilePrefs() {
-  if (testing_profile_prefs_ != nullptr) {
-    return testing_profile_prefs_;
-  }
-  return ProfileManager::GetPrimaryUserProfile()->GetPrefs();
-}
-
 // static
 void BraveStatsUpdater::SetStatsUpdatedCallbackForTesting(
     StatsUpdatedCallback* stats_updated_callback) {
@@ -214,10 +188,6 @@ void BraveStatsUpdater::SetURLLoaderFactoryForTesting(
 void BraveStatsUpdater::SetUsageServerForTesting(
     const std::string& usage_server) {
   usage_server_ = usage_server;
-}
-
-void BraveStatsUpdater::SetProfilePrefsForTesting(raw_ptr<PrefService> prefs) {
-  testing_profile_prefs_ = prefs;
 }
 
 GURL BraveStatsUpdater::BuildStatsEndpoint(const std::string& path) {
@@ -312,16 +282,12 @@ void BraveStatsUpdater::OnServerPingTimerFired() {
 }
 
 bool BraveStatsUpdater::IsReferralInitialized() {
-#if BUILDFLAG(ENABLE_BRAVE_REFERRALS)
   return pref_service_->GetBoolean(kReferralInitialization) ||
          pref_service_->GetBoolean(kReferralCheckedForPromoCodeFile);
-#else
-  return true;
-#endif
 }
 
 bool BraveStatsUpdater::IsAdsEnabled() {
-  return GetProfilePrefs()->GetBoolean(ads::prefs::kEnabled);
+  return pref_service_->GetBoolean(ads::prefs::kEnabledForLastProfile);
 }
 
 bool BraveStatsUpdater::HasDoneThresholdPing() {
@@ -361,6 +327,7 @@ void BraveStatsUpdater::QueueServerPing() {
         base::BindRepeating(&BraveStatsUpdater::OnReferralInitialization,
                             base::Unretained(this)));
   }
+
   if (ads_enabled) {
     DetectUncertainFuture();
   }
@@ -398,10 +365,9 @@ void BraveStatsUpdater::SendServerPing() {
   auto traffic_annotation = AnonymousStatsAnnotation();
   auto resource_request = std::make_unique<network::ResourceRequest>();
 
-  auto* profile_pref_service = GetProfilePrefs();
   auto stats_updater_params =
-      std::make_unique<brave_stats::BraveStatsUpdaterParams>(
-          pref_service_, profile_pref_service, arch_);
+      std::make_unique<brave_stats::BraveStatsUpdaterParams>(pref_service_,
+                                                             arch_);
 
   auto endpoint = BuildStatsEndpoint(kBraveUsageStandardPath);
   resource_request->url = GetUpdateURL(endpoint, *stats_updater_params);

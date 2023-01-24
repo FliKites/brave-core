@@ -1,15 +1,15 @@
 /* Copyright (c) 2020 The Brave Authors. All rights reserved.
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
- * You can obtain one at http://mozilla.org/MPL/2.0/. */
+ * You can obtain one at https://mozilla.org/MPL/2.0/. */
 
 #include "bat/ads/internal/ml/transformation/hash_vectorizer.h"
 
 #include "absl/types/optional.h"
 #include "base/json/json_reader.h"
 #include "base/values.h"
-#include "bat/ads/internal/base/unittest/unittest_base.h"
-#include "bat/ads/internal/base/unittest/unittest_file_util.h"
+#include "bat/ads/internal/common/unittest/unittest_base.h"
+#include "bat/ads/internal/common/unittest/unittest_file_util.h"
 
 // npm run test -- brave_unit_tests --filter=BatAds*
 
@@ -21,7 +21,7 @@ constexpr char kHashCheck[] = "ml/hash_vectorizer/hashing_validation.json";
 
 void RunHashingExtractorTestCase(const std::string& test_case_name) {
   // Arrange
-  const double kTolerance = 1e-7;
+  const double tolerance = 1e-7;
 
   const absl::optional<std::string> json =
       ReadFileFromTestPathToString(kHashCheck);
@@ -56,7 +56,7 @@ void RunHashingExtractorTestCase(const std::string& test_case_name) {
     const base::Value& idx_val = idx_list[i];
     const base::Value& count_val = count_list[i];
     EXPECT_TRUE(count_val.GetInt() - frequencies.at(idx_val.GetInt()) <
-                kTolerance);
+                tolerance);
   }
 }
 

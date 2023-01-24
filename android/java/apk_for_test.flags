@@ -40,7 +40,6 @@
     *** mLogoCoordinator;
     *** insertSiteSectionView(...);
     *** isScrollableMvtEnabled(...);
-    *** hasLoadCompleted(...);
 }
 
 -keep class org.chromium.chrome.browser.suggestions.tile.MostVisitedTilesMediator {
@@ -108,8 +107,13 @@
     *** runMenuItemEnterAnimations(...);
 }
 
+-keep class org.chromium.chrome.browser.quickactionsearchwidget.QuickActionSearchWidgetProvider$QuickActionSearchWidgetProviderDino
+
+-keep class org.chromium.chrome.browser.quickactionsearchwidget.QuickActionSearchWidgetProvider$QuickActionSearchWidgetProviderSearch
+
 -keep class org.chromium.chrome.browser.quickactionsearchwidget.QuickActionSearchWidgetProvider {
     *** setWidgetEnabled(...);
+    *** setWidgetComponentEnabled(...);
 }
 
 -keep class org.chromium.chrome.browser.quickactionsearchwidget.BraveQuickActionSearchWidgetProvider {
@@ -460,6 +464,14 @@
 
 -keep class org.chromium.chrome.browser.autofill.BraveAutofillPopupBridge {
     public <init>(...);
+}
+
+-keep class org.chromium.chrome.browser.download.BraveDownloadMessageUiControllerImpl {
+    *** isVisibleToUser(...);
+}
+
+-keep class org.chromium.chrome.browser.download.DownloadMessageUiControllerImpl {
+    *** isVisibleToUser(...);
 }
 
 -keep class org.chromium.chrome.browser.omnibox.suggestions.BraveAutocompleteCoordinator {

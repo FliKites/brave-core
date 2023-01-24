@@ -144,7 +144,9 @@ public class KeyringModel implements KeyringServiceObserver {
     }
 
     void update() {
-        mBraveWalletService.getSelectedCoin(coinType -> { update(coinType); });
+        if (mBraveWalletService != null) {
+            mBraveWalletService.getSelectedCoin(coinType -> { update(coinType); });
+        }
     }
 
     private void updateSelectedAccountPerOriginOrFirst(KeyringInfo keyringInfo) {
@@ -225,7 +227,7 @@ public class KeyringModel implements KeyringServiceObserver {
         }
     }
 
-    public List<AccountInfo> stripNoBuySwapAccounts(List<AccountInfo> accountInfos) {
+    public List<AccountInfo> stripNoSwapSupportedAccounts(List<AccountInfo> accountInfos) {
         List<AccountInfo> accountInfosFiltered = new ArrayList<>();
         for (AccountInfo accountInfo : accountInfos) {
             if (accountInfo.coin != CoinType.SOL) {

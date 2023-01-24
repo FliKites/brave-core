@@ -11,6 +11,7 @@
 #include "brave/browser/brave_rewards/rewards_panel/rewards_panel_coordinator.h"
 #include "brave/browser/brave_rewards/rewards_service_factory.h"
 #include "brave/browser/sparkle_buildflags.h"
+#include "brave/browser/translate/brave_translate_utils.h"
 #include "brave/browser/ui/brave_browser.h"
 #include "brave/browser/ui/sidebar/sidebar_utils.h"
 #include "brave/browser/ui/views/brave_actions/brave_actions_container.h"
@@ -20,6 +21,7 @@
 #include "brave/browser/ui/views/frame/vertical_tab_strip_region_view.h"
 #include "brave/browser/ui/views/frame/vertical_tab_strip_widget_delegate_view.h"
 #include "brave/browser/ui/views/location_bar/brave_location_bar_view.h"
+#include "brave/browser/ui/views/omnibox/brave_omnibox_view_views.h"
 #include "brave/browser/ui/views/sidebar/sidebar_container_view.h"
 #include "brave/browser/ui/views/tabs/features.h"
 #include "brave/browser/ui/views/toolbar/bookmark_button.h"
@@ -28,7 +30,6 @@
 #include "brave/browser/ui/views/window_closing_confirm_dialog_view.h"
 #include "brave/components/constants/pref_names.h"
 #include "brave/components/speedreader/common/buildflags/buildflags.h"
-#include "brave/components/translate/core/common/buildflags.h"
 #include "chrome/browser/ui/browser_commands.h"
 #include "chrome/browser/ui/color/chrome_color_id.h"
 #include "chrome/browser/ui/frame/window_frame_util.h"
@@ -61,10 +62,6 @@
 #include "brave/components/constants/webui_url_constants.h"
 #include "chrome/browser/ui/views/location_bar/location_bar_bubble_delegate_view.h"
 #include "components/grit/brave_components_strings.h"
-#endif
-
-#if BUILDFLAG(ENABLE_BRAVE_TRANSLATE_GO)
-#include "brave/browser/translate/brave_translate_utils.h"
 #endif
 
 namespace {
@@ -176,43 +173,41 @@ BraveBrowserView::BraveBrowserView(std::unique_ptr<Browser> browser)
 #endif
 
   const bool supports_vertical_tabs =
+      base::FeatureList::IsEnabled(tabs::features::kBraveVerticalTabs) &&
       tabs::features::SupportsVerticalTabs(browser_.get());
+  if (supports_vertical_tabs) {
+    vertical_tab_strip_host_view_ =
+        AddChildView(std::make_unique<views::View>());
+  }
 
   // Only normal window (tabbed) should have sidebar.
   const bool can_have_sidebar = sidebar::CanUseSidebar(browser_.get());
-
-  if (!supports_vertical_tabs && !can_have_sidebar)
-    return;
-
-  // Wrap chromium side panel with our sidebar container
-  auto original_side_panel = RemoveChildViewT(unified_side_panel_.get());
-  sidebar_container_view_ =
-      contents_container_->AddChildView(std::make_unique<SidebarContainerView>(
-          GetBraveBrowser(), side_panel_coordinator(),
-          std::move(original_side_panel)));
-  unified_side_panel_ = sidebar_container_view_->side_panel();
-  if (supports_vertical_tabs) {
-    vertical_tab_strip_host_view_ =
-        contents_container_->AddChildView(std::make_unique<views::View>());
-  }
-
-  contents_container_->SetLayoutManager(
-      std::make_unique<BraveContentsLayoutManager>(
-          devtools_web_view_, contents_web_view_, sidebar_container_view_,
-          vertical_tab_strip_host_view_));
-  sidebar_host_view_ = AddChildView(std::make_unique<views::View>());
-
-  // Make sure |find_bar_host_view_| is the last child of BrowserView by
-  // re-ordering. FindBarHost widgets uses this view as a  kHostViewKey.
-  // See the comments of BrowserView::find_bar_host_view().
-  ReorderChildView(find_bar_host_view_, -1);
-
   if (can_have_sidebar) {
+    // Wrap chromium side panel with our sidebar container
+    auto original_side_panel = RemoveChildViewT(unified_side_panel_.get());
+    sidebar_container_view_ = contents_container_->AddChildView(
+        std::make_unique<SidebarContainerView>(GetBraveBrowser(),
+                                               side_panel_coordinator(),
+                                               std::move(original_side_panel)));
+    unified_side_panel_ = sidebar_container_view_->side_panel();
+    contents_container_->SetLayoutManager(
+        std::make_unique<BraveContentsLayoutManager>(
+            devtools_web_view_, contents_web_view_, sidebar_container_view_));
+    sidebar_host_view_ = AddChildView(std::make_unique<views::View>());
+
     pref_change_registrar_.Add(
         prefs::kSidePanelHorizontalAlignment,
         base::BindRepeating(&BraveBrowserView::OnPreferenceChanged,
                             base::Unretained(this)));
   }
+
+  if (!supports_vertical_tabs && !can_have_sidebar)
+    return;
+
+  // Make sure |find_bar_host_view_| is the last child of BrowserView by
+  // re-ordering. FindBarHost widgets uses this view as a  kHostViewKey.
+  // See the comments of BrowserView::find_bar_host_view().
+  ReorderChildView(find_bar_host_view_, -1);
 }
 
 void BraveBrowserView::OnPreferenceChanged(const std::string& pref_name) {
@@ -308,6 +303,9 @@ gfx::Rect BraveBrowserView::GetShieldsBubbleRect() {
 }
 
 bool BraveBrowserView::GetTabStripVisible() const {
+  if (!base::FeatureList::IsEnabled(tabs::features::kBraveVerticalTabs))
+    return BrowserView::GetTabStripVisible();
+
   if (tabs::features::ShouldShowVerticalTabs(browser()))
     return false;
 
@@ -316,6 +314,9 @@ bool BraveBrowserView::GetTabStripVisible() const {
 
 #if BUILDFLAG(IS_WIN)
 bool BraveBrowserView::GetSupportsTitle() const {
+  if (!base::FeatureList::IsEnabled(tabs::features::kBraveVerticalTabs))
+    return BrowserView::GetSupportsTitle();
+
   if (tabs::features::SupportsVerticalTabs(browser()))
     return true;
 
@@ -360,25 +361,6 @@ void BraveBrowserView::ShowUpdateChromeDialog() {
 #endif
 }
 
-// The translate bubble will be shown if ENABLE_BRAVE_TRANSLATE_GO build flag
-// is enabled. We utilize chromium's translate UI directly along with
-// go-translate.
-ShowTranslateBubbleResult BraveBrowserView::ShowTranslateBubble(
-    content::WebContents* web_contents,
-    translate::TranslateStep step,
-    const std::string& source_language,
-    const std::string& target_language,
-    translate::TranslateErrors error_type,
-    bool is_user_gesture) {
-#if BUILDFLAG(ENABLE_BRAVE_TRANSLATE_GO)
-  return BrowserView::ShowTranslateBubble(web_contents, step, source_language,
-                                          target_language, error_type,
-                                          is_user_gesture);
-#else   // BUILDFLAG(ENABLE_BRAVE_TRANSLATE_GO)
-  return ShowTranslateBubbleResult::BROWSER_WINDOW_NOT_VALID;
-#endif  // BUILDFLAG(ENABLE_BRAVE_TRANSLATE_GO)
-}
-
 speedreader::SpeedreaderBubbleView* BraveBrowserView::ShowSpeedreaderBubble(
     speedreader::SpeedreaderTabHelper* tab_helper,
     bool is_enabled) {
@@ -402,6 +384,12 @@ speedreader::SpeedreaderBubbleView* BraveBrowserView::ShowSpeedreaderBubble(
 #else
   return nullptr;
 #endif
+}
+
+bool BraveBrowserView::HasSelectedURL() const {
+  return static_cast<BraveOmniboxViewViews*>(
+             GetLocationBarView()->omnibox_view())
+      ->SelectedTextIsURL();
 }
 
 WalletButton* BraveBrowserView::GetWalletButton() {
@@ -436,6 +424,17 @@ void BraveBrowserView::AddedToWidget() {
     vertical_tab_strip_widget_delegate_view_ =
         VerticalTabStripWidgetDelegateView::Create(
             this, vertical_tab_strip_host_view_);
+
+    // By setting this property to the widget for vertical tabs,
+    // BrowserView::GetBrowserViewForNativeWindow() will return browser view
+    // properly even when we pass the native window for vertical tab strip.
+    // As a result, we don't have to call GetTopLevelWidget() in order to
+    // get browser view from the vertical tab strip's widget.
+    SetNativeWindowPropertyForWidget(
+        vertical_tab_strip_widget_delegate_view_->GetWidget());
+
+    GetBrowserViewLayout()->set_vertical_tab_strip_host(
+        vertical_tab_strip_host_view_.get());
   }
 }
 
@@ -455,10 +454,13 @@ void BraveBrowserView::OnTabStripModelChanged(
 
 views::CloseRequestResult BraveBrowserView::OnWindowCloseRequested() {
   if (GetBraveBrowser()->ShouldAskForBrowserClosingBeforeHandlers()) {
-    WindowClosingConfirmDialogView::Show(
-        browser(),
-        base::BindOnce(&BraveBrowserView::OnWindowClosingConfirmResponse,
-                       weak_ptr_.GetWeakPtr()));
+    if (!closing_confirm_dialog_activated_) {
+      WindowClosingConfirmDialogView::Show(
+          browser(),
+          base::BindOnce(&BraveBrowserView::OnWindowClosingConfirmResponse,
+                         weak_ptr_.GetWeakPtr()));
+      closing_confirm_dialog_activated_ = true;
+    }
     return views::CloseRequestResult::kCannotClose;
   }
 
@@ -466,6 +468,9 @@ views::CloseRequestResult BraveBrowserView::OnWindowCloseRequested() {
 }
 
 void BraveBrowserView::OnWindowClosingConfirmResponse(bool allowed_to_close) {
+  DCHECK(closing_confirm_dialog_activated_);
+  closing_confirm_dialog_activated_ = false;
+
   auto* browser = GetBraveBrowser();
   // Set to Browser instance because Browser instance knows about the result
   // of any warning handlers or beforeunload handlers.
@@ -500,9 +505,27 @@ void BraveBrowserView::MaybeShowReadingListInSidePanelIPH() {
   // Do nothing.
 }
 
+void BraveBrowserView::OnWidgetActivationChanged(views::Widget* widget,
+                                                 bool active) {
+  BrowserView::OnWidgetActivationChanged(widget, active);
+
+  // For updating sidebar's item state.
+  // As we can activate other window's Talk tab with current window's sidebar
+  // Talk item, sidebar Talk item should have activated state if other windows
+  // have Talk tab. It would be complex to get updated when Talk tab is opened
+  // from other windows. So, simply trying to update when window activation
+  // state is changed. With this, active window could have correct sidebar item
+  // state.
+  if (sidebar_container_view_)
+    sidebar_container_view_->UpdateSidebar();
+}
+
 bool BraveBrowserView::ShouldShowWindowTitle() const {
   if (BrowserView::ShouldShowWindowTitle())
     return true;
+
+  if (!base::FeatureList::IsEnabled(tabs::features::kBraveVerticalTabs))
+    return false;
 
   if (tabs::features::ShouldShowWindowTitleForVerticalTabs(browser()))
     return true;

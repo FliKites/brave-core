@@ -1,7 +1,7 @@
 /* Copyright (c) 2020 The Brave Authors. All rights reserved.
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
- * You can obtain one at http://mozilla.org/MPL/2.0/. */
+ * You can obtain one at https://mozilla.org/MPL/2.0/. */
 
 #include "bat/ads/internal/ml/data/vector_data.h"
 
@@ -106,7 +106,8 @@ VectorData& VectorData::operator=(VectorData&& vector_data) noexcept {
 }
 
 double operator*(const VectorData& lhs, const VectorData& rhs) {
-  if (!lhs.storage_->DimensionCount() || !rhs.storage_->DimensionCount()) {
+  if (lhs.storage_->DimensionCount() == 0 ||
+      rhs.storage_->DimensionCount() == 0) {
     return std::numeric_limits<double>::quiet_NaN();
   }
 
@@ -139,7 +140,8 @@ double operator*(const VectorData& lhs, const VectorData& rhs) {
 }
 
 void VectorData::AddElementWise(const VectorData& v_add) {
-  if (!storage_->DimensionCount() || !v_add.storage_->DimensionCount()) {
+  if (storage_->DimensionCount() == 0 ||
+      v_add.storage_->DimensionCount() == 0) {
     return;
   }
 
@@ -168,7 +170,7 @@ void VectorData::AddElementWise(const VectorData& v_add) {
 }
 
 void VectorData::DivideByScalar(const float scalar) {
-  if (!storage_->DimensionCount()) {
+  if (storage_->DimensionCount() == 0) {
     return;
   }
 
@@ -217,7 +219,7 @@ const std::vector<float>& VectorData::GetValuesForTesting() const {
 }
 
 std::string VectorData::GetVectorAsString() const {
-  if (!storage_->DimensionCount()) {
+  if (storage_->DimensionCount() == 0) {
     return {};
   }
 

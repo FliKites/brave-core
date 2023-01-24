@@ -10,13 +10,14 @@
 #include "base/base64.h"
 #include "base/bind.h"
 #include "base/callback_helpers.h"
+#include "base/json/values_util.h"
 #include "base/logging.h"
 #include "base/path_service.h"
 #include "base/ranges/algorithm.h"
 #include "base/strings/escape.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_util.h"
-#include "base/threading/sequenced_task_runner_handle.h"
+#include "base/task/sequenced_task_runner.h"
 #include "net/http/http_status_code.h"
 
 namespace ledger {
@@ -110,7 +111,7 @@ std::string TestLedgerClient::URIEncode(const std::string& value) {
 void TestLedgerClient::LoadURL(mojom::UrlRequestPtr request,
                                client::LoadURLCallback callback) {
   DCHECK(request);
-  base::SequencedTaskRunnerHandle::Get()->PostTask(
+  base::SequencedTaskRunner::GetCurrentDefault()->PostTask(
       FROM_HERE, base::BindOnce(&TestLedgerClient::LoadURLAfterDelay,
                                 weak_factory_.GetWeakPtr(), std::move(request),
                                 std::move(callback)));
@@ -205,6 +206,22 @@ base::Value TestLedgerClient::GetValueState(const std::string& name) const {
   return value ? value->Clone() : base::Value();
 }
 
+void TestLedgerClient::SetTimeState(const std::string& name, base::Time time) {
+  state_store_.SetByDottedPath(name, base::TimeToValue(time));
+}
+
+base::Time TestLedgerClient::GetTimeState(const std::string& name) const {
+  const auto* value = state_store_.FindByDottedPath(name);
+  DCHECK(value);
+  if (!value) {
+    return base::Time();
+  }
+
+  auto time = base::ValueToTime(*value);
+  DCHECK(time);
+  return time.value_or(base::Time());
+}
+
 void TestLedgerClient::ClearState(const std::string& name) {
   state_store_.RemoveByDottedPath(name);
 }
@@ -274,7 +291,7 @@ void TestLedgerClient::ReconcileStampReset() {}
 void TestLedgerClient::RunDBTransaction(
     mojom::DBTransactionPtr transaction,
     client::RunDBTransactionCallback callback) {
-  base::SequencedTaskRunnerHandle::Get()->PostTask(
+  base::SequencedTaskRunner::GetCurrentDefault()->PostTask(
       FROM_HERE, base::BindOnce(&TestLedgerClient::RunDBTransactionAfterDelay,
                                 weak_factory_.GetWeakPtr(),
                                 std::move(transaction), std::move(callback)));

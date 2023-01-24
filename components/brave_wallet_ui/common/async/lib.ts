@@ -231,22 +231,14 @@ export async function getBuyAssetUrl (args: {
     console.log(`Failed to get buy URL: ${error}`)
   }
 
-  // adjust Wyre on-ramp url for multichain
-  if (args.onRampProvider === BraveWallet.OnRampProvider.kWyre) {
-    if (args.chainId === BraveWallet.AVALANCHE_MAINNET_CHAIN_ID) {
-      return url.replace('dest=ethereum:', 'dest=avalanche:')
-    }
-    if (args.chainId === BraveWallet.POLYGON_MAINNET_CHAIN_ID) {
-      return url.replace('dest=ethereum:', 'dest=matic:')
-    }
-  }
-
   return url
 }
 
-export async function getTokenList (network: BraveWallet.NetworkInfo) {
+export const getTokenList = async (
+  network: Pick<BraveWallet.NetworkInfo, 'chainId' | 'coin'>
+): Promise<{ tokens: BraveWallet.BlockchainToken[] }> => {
   const { blockchainRegistry } = getAPIProxy()
-  return (blockchainRegistry.getAllTokens(network.chainId, network.coin))
+  return blockchainRegistry.getAllTokens(network.chainId, network.coin)
 }
 
 export async function getBuyAssets (onRampProvider: BraveWallet.OnRampProvider, chainId: string) {
@@ -258,19 +250,15 @@ export async function getBuyAssets (onRampProvider: BraveWallet.OnRampProvider, 
 
 export const getAllBuyAssets = async (): Promise<{
   rampAssetOptions: BraveWallet.BlockchainToken[]
-  wyreAssetOptions: BraveWallet.BlockchainToken[]
   sardineAssetOptions: BraveWallet.BlockchainToken[]
   transakAssetOptions: BraveWallet.BlockchainToken[]
   allAssetOptions: BraveWallet.BlockchainToken[]
 }> => {
   const { blockchainRegistry } = getAPIProxy()
-  const { kRamp, kWyre, kSardine, kTransak } = BraveWallet.OnRampProvider
+  const { kRamp, kSardine, kTransak } = BraveWallet.OnRampProvider
 
   const rampAssetsPromises = await Promise.all(
     SupportedOnRampNetworks.map(chainId => blockchainRegistry.getBuyTokens(kRamp, chainId))
-  )
-  const wyreAssetsPromises = await Promise.all(
-    SupportedOnRampNetworks.map(chainId => blockchainRegistry.getBuyTokens(kWyre, chainId))
   )
   const sardineAssetsPromises = await Promise.all(
     SupportedOnRampNetworks.map(chainId => blockchainRegistry.getBuyTokens(kSardine, chainId))
@@ -282,10 +270,6 @@ export const getAllBuyAssets = async (): Promise<{
 
   // add token logos
   const rampAssetOptions: BraveWallet.BlockchainToken[] = rampAssetsPromises
-    .flatMap(p => p.tokens)
-    .map(addLogoToToken)
-
-  const wyreAssetOptions: BraveWallet.BlockchainToken[] = wyreAssetsPromises
     .flatMap(p => p.tokens)
     .map(addLogoToToken)
 
@@ -304,11 +288,6 @@ export const getAllBuyAssets = async (): Promise<{
   } = getNativeTokensFromList(rampAssetOptions)
 
   const {
-    tokens: wyreTokenOptions,
-    nativeAssets: wyreNativeAssetOptions
-  } = getNativeTokensFromList(wyreAssetOptions)
-
-  const {
     tokens: sardineTokenOptions,
     nativeAssets: sardineNativeAssetOptions
   } = getNativeTokensFromList(sardineAssetOptions)
@@ -325,11 +304,6 @@ export const getAllBuyAssets = async (): Promise<{
   } = getBatTokensFromList(rampTokenOptions)
 
   const {
-    bat: wyreBatTokens,
-    nonBat: wyreNonBatTokens
-  } = getBatTokensFromList(wyreTokenOptions)
-
-  const {
     bat: sardineBatTokens,
     nonBat: sardineNonBatTokens
   } = getBatTokensFromList(sardineTokenOptions)
@@ -342,18 +316,15 @@ export const getAllBuyAssets = async (): Promise<{
   // sort lists
   // Move Gas coins and BAT to front of list
   const sortedRampOptions = [...rampNativeAssetOptions, ...rampBatTokens, ...rampNonBatTokens]
-  const sortedWyreOptions = [...wyreNativeAssetOptions, ...wyreBatTokens, ...wyreNonBatTokens]
   const sortedSardineOptions = [...sardineNativeAssetOptions, ...sardineBatTokens, ...sardineNonBatTokens]
   const sortedTransakOptions = [...transakNativeAssetOptions, ...transakBatTokens, ...transakNonBatTokens]
 
   const results = {
     rampAssetOptions: sortedRampOptions,
-    wyreAssetOptions: sortedWyreOptions,
     sardineAssetOptions: sortedSardineOptions,
     transakAssetOptions: sortedTransakOptions,
     allAssetOptions: getUniqueAssets([
       ...sortedRampOptions,
-      ...sortedWyreOptions,
       ...sortedSardineOptions,
       ...sortedTransakOptions
     ])
@@ -808,7 +779,9 @@ export function refreshNetworkInfo () {
     dispatch(WalletActions.setDefaultNetworks(defaultNetworks))
 
     // Get current selected networks info
-    const selectedCoin = await dispatch(walletApi.endpoints.getSelectedCoin.initiate()).unwrap()
+    const selectedCoin = await dispatch(
+      walletApi.endpoints.getSelectedCoin.initiate(undefined)
+    ).unwrap()
     const chainId = await jsonRpcService.getChainId(selectedCoin)
 
     const currentNetwork = getNetworkInfo(chainId.chainId, selectedCoin, networkList)
@@ -841,14 +814,26 @@ export function refreshKeyringInfo () {
     }))
     const filteredDefaultAccounts = defaultAccounts.filter((account) => Object.keys(account).length !== 0)
     dispatch(WalletActions.setDefaultAccounts(filteredDefaultAccounts))
-    const selectedCoin = await dispatch(walletApi.endpoints.getSelectedCoin.initiate()).unwrap()
-    const coinsChainId = await jsonRpcService.getChainId(selectedCoin)
+
+    const selectedCoin = await dispatch(
+      walletApi.endpoints.getSelectedCoin.initiate(undefined)
+    ).unwrap()
+
+    let selectedAccount = { address: null } as { address: string | null }
+
+    if (selectedCoin === BraveWallet.CoinType.FIL) {
+      const coinsChainId = await jsonRpcService.getChainId(selectedCoin)
+      selectedAccount = await keyringService.getFilecoinSelectedAccount(
+        coinsChainId.chainId
+      )
+    }
+
+    if (selectedCoin && selectedCoin !== BraveWallet.CoinType.FIL) {
+      selectedAccount = await keyringService.getSelectedAccount(selectedCoin)
+    }
 
     // Get selectedAccountAddress
-    const getSelectedAccount = selectedCoin === BraveWallet.CoinType.FIL
-      ? await keyringService.getFilecoinSelectedAccount(coinsChainId.chainId)
-      : await keyringService.getSelectedAccount(selectedCoin)
-    const selectedAddress = getSelectedAccount.address
+    const selectedAddress = selectedAccount.address
 
     // Fallback account address if selectedAccount returns null
     const fallbackAccount = walletInfo.accountInfos[0]
@@ -894,34 +879,6 @@ export function refreshSitePermissions () {
     const accountsWithPermission: WalletAccountType[] = getAllPermissions.filter((account): account is WalletAccountType => account !== undefined)
     dispatch(WalletActions.setSitePermissions({ accounts: accountsWithPermission }))
   }
-}
-
-/**
- * Check if the keyring associated with the given account AND the network
- * support the EIP-1559 fee market for paying gas fees.
- *
- * This method can also be used to determine if the given parameters support
- * EVM Type-2 transactions. The return value is always false for non-EVM
- * networks.
- *
- * @param {WalletAccountType} account
- * @param {BraveWallet.NetworkInfo} network
- * @returns {boolean} Returns a boolean result indicating EIP-1559 support.
- */
-export function hasEIP1559Support (account: WalletAccountType, network: BraveWallet.NetworkInfo) {
-  let keyringSupportsEIP1559
-  switch (account.accountType) {
-    case 'Primary':
-    case 'Secondary':
-    case 'Ledger':
-    case 'Trezor':
-      keyringSupportsEIP1559 = true
-      break
-    default:
-      keyringSupportsEIP1559 = false
-  }
-
-  return keyringSupportsEIP1559 && network.isEip1559
 }
 
 export async function sendEthTransaction (payload: SendEthTransactionParams) {

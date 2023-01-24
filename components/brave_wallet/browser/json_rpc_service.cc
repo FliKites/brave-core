@@ -1433,14 +1433,14 @@ void JsonRpcService::SnsResolveHost(const std::string& domain,
                                     SnsResolveHostCallback callback) {
   if (!base::FeatureList::IsEnabled(features::kBraveWalletSnsFeature)) {
     std::move(callback).Run(
-        GURL(), mojom::SolanaProviderError::kInvalidParams,
+        absl::nullopt, mojom::SolanaProviderError::kInvalidParams,
         l10n_util::GetStringUTF8(IDS_WALLET_INVALID_PARAMETERS));
     return;
   }
 
   if (!IsValidDomain(domain)) {
     std::move(callback).Run(
-        GURL(), mojom::SolanaProviderError::kInvalidParams,
+        absl::nullopt, mojom::SolanaProviderError::kInvalidParams,
         l10n_util::GetStringUTF8(IDS_WALLET_INVALID_PARAMETERS));
     return;
   }
@@ -1698,21 +1698,14 @@ void JsonRpcService::OnUnstoppableDomainsGetWalletAddr(
     return;
   }
 
-  auto bytes_result = ParseDecodedBytesResult(api_request_result.value_body());
-  if (!bytes_result) {
+  auto array_result = eth::ParseUnstoppableDomainsProxyReaderGetMany(
+      api_request_result.value_body());
+  if (!array_result) {
     mojom::ProviderError error;
     std::string error_message;
     ParseErrorResult<mojom::ProviderError>(api_request_result.value_body(),
                                            &error, &error_message);
     ud_get_eth_addr_calls_.SetError(key, chain_id, error, error_message);
-    return;
-  }
-
-  auto array_result = eth_abi::ExtractStringArrayFromTuple(*bytes_result, 0);
-  if (!array_result) {
-    ud_get_eth_addr_calls_.SetError(
-        key, chain_id, mojom::ProviderError::kInternalError,
-        l10n_util::GetStringUTF8(IDS_WALLET_INTERNAL_ERROR));
     return;
   }
 
@@ -2187,7 +2180,7 @@ void JsonRpcService::EthGetLogs(const std::string& chain_id,
   auto network_url = GetNetworkURL(prefs_, chain_id, mojom::CoinType::ETH);
   if (!network_url.is_valid()) {
     std::move(callback).Run(
-        std::vector<Log>(), mojom::ProviderError::kInternalError,
+        std::vector<Log>(), {}, mojom::ProviderError::kInternalError,
         l10n_util::GetStringUTF8(IDS_WALLET_INTERNAL_ERROR));
     return;
   }
@@ -2206,18 +2199,19 @@ void JsonRpcService::OnEthGetLogs(EthGetLogsCallback callback,
   std::vector<Log> logs;
   if (!api_request_result.Is2XXResponseCode()) {
     std::move(callback).Run(
-        logs, mojom::ProviderError::kInternalError,
+        logs, {}, mojom::ProviderError::kInternalError,
         l10n_util::GetStringUTF8(IDS_WALLET_INTERNAL_ERROR));
     return;
   }
 
   if (!eth::ParseEthGetLogs(api_request_result.value_body(), &logs)) {
-    std::move(callback).Run(logs, mojom::ProviderError::kParsingError,
+    std::move(callback).Run(logs, {}, mojom::ProviderError::kParsingError,
                             l10n_util::GetStringUTF8(IDS_WALLET_PARSING_ERROR));
     return;
   }
 
-  std::move(callback).Run(logs, mojom::ProviderError::kSuccess, "");
+  std::move(callback).Run(logs, api_request_result.value_body().Clone(),
+                          mojom::ProviderError::kSuccess, "");
 }
 
 void JsonRpcService::GetSupportsInterface(
@@ -2632,7 +2626,7 @@ void JsonRpcService::GetSolanaSignatureStatuses(
       solana::getSignatureStatuses(tx_signatures), true,
       network_urls_[mojom::CoinType::SOL], std::move(internal_callback),
       base::BindOnce(&ConvertMultiUint64InObjectArrayToString, "/result/value",
-                     std::vector<std::string>({"slot", "confirmations"})));
+                     "", std::vector<std::string>({"slot", "confirmations"})));
 }
 
 void JsonRpcService::OnGetSolanaSignatureStatuses(
@@ -2773,6 +2767,46 @@ void JsonRpcService::OnGetSolanaBlockHeight(
   }
 
   std::move(callback).Run(block_height, mojom::SolanaProviderError::kSuccess,
+                          "");
+}
+
+void JsonRpcService::GetSolanaTokenAccountsByOwner(
+    const SolanaAddress& pubkey,
+    GetSolanaTokenAccountsByOwnerCallback callback) {
+  auto internal_callback =
+      base::BindOnce(&JsonRpcService::OnGetSolanaTokenAccountsByOwner,
+                     weak_ptr_factory_.GetWeakPtr(), std::move(callback));
+  RequestInternal(
+      solana::getTokenAccountsByOwner(pubkey.ToBase58()), true,
+      network_urls_[mojom::CoinType::SOL], std::move(internal_callback),
+      base::BindOnce(&ConvertMultiUint64InObjectArrayToString, "/result/value",
+                     "/account",
+                     std::vector<std::string>({"lamports", "rentEpoch"})));
+}
+
+void JsonRpcService::OnGetSolanaTokenAccountsByOwner(
+    GetSolanaTokenAccountsByOwnerCallback callback,
+    APIRequestResult api_request_result) {
+  if (!api_request_result.Is2XXResponseCode()) {
+    std::move(callback).Run(
+        {}, mojom::SolanaProviderError::kInternalError,
+        l10n_util::GetStringUTF8(IDS_WALLET_INTERNAL_ERROR));
+    return;
+  }
+
+  std::vector<SolanaAccountInfo> token_accounts;
+  if (!solana::ParseGetTokenAccountsByOwner(api_request_result.value_body(),
+                                            &token_accounts)) {
+    mojom::SolanaProviderError error;
+    std::string error_message;
+    ParseErrorResult<mojom::SolanaProviderError>(
+        api_request_result.value_body(), &error, &error_message);
+    std::move(callback).Run(std::vector<SolanaAccountInfo>(), error,
+                            error_message);
+    return;
+  }
+
+  std::move(callback).Run(token_accounts, mojom::SolanaProviderError::kSuccess,
                           "");
 }
 

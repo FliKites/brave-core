@@ -1,14 +1,14 @@
 /* Copyright (c) 2022 The Brave Authors. All rights reserved.
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
- * You can obtain one at http://mozilla.org/MPL/2.0/. */
+ * You can obtain one at https://mozilla.org/MPL/2.0/. */
 
 #include "bat/ads/internal/processors/contextual/text_embedding/text_embedding_processor_util.h"
 
 #include <tuple>
 #include <vector>
 
-#include "bat/ads/internal/base/unittest/unittest_base.h"
+#include "bat/ads/internal/common/unittest/unittest_base.h"
 
 // npm run test -- brave_unit_tests --filter=BatAds*
 
@@ -18,7 +18,7 @@ class BatAdsTextEmbeddingProcessorUtilTest : public UnitTestBase {};
 
 TEST_F(BatAdsTextEmbeddingProcessorUtilTest, SanitizeHtml) {
   // Arrange
-  const std::vector<std::tuple<std::string, std::string>> kSamples = {
+  const std::vector<std::tuple<std::string, std::string>> samples = {
       {R"(<meta property="og:title" content="test">)", "test"},
       {R"(<meta property="og:title" content=" testing   ">)", "testing"},
       {R"(<meta property="og:title" content="test (string) - for 78 unittest 246">)",
@@ -38,7 +38,7 @@ TEST_F(BatAdsTextEmbeddingProcessorUtilTest, SanitizeHtml) {
       {" ", {}},
       {{}, {}}};
 
-  for (const auto& [html, expected_text] : kSamples) {
+  for (const auto& [html, expected_text] : samples) {
     // Act
     const std::string text = SanitizeHtml(html);
 
@@ -49,7 +49,7 @@ TEST_F(BatAdsTextEmbeddingProcessorUtilTest, SanitizeHtml) {
 
 TEST_F(BatAdsTextEmbeddingProcessorUtilTest, SanitizeText) {
   // Arrange
-  const std::vector<std::tuple<std::string, std::string>> kSamples = {
+  const std::vector<std::tuple<std::string, std::string>> samples = {
       {"test", "test"},
       {" testing   ", "testing"},
       {"test (string) - for 78 unittest 246", "test string for unittest"},
@@ -62,7 +62,7 @@ TEST_F(BatAdsTextEmbeddingProcessorUtilTest, SanitizeText) {
       {" ", {}},
       {{}, {}}};
 
-  for (const auto& [text, expected_sanitized_text] : kSamples) {
+  for (const auto& [text, expected_sanitized_text] : samples) {
     // Act
     const std::string sanitized_text = SanitizeText(text);
 

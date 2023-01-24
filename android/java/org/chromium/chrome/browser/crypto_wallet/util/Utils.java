@@ -1,7 +1,7 @@
 /* Copyright (c) 2021 The Brave Authors. All rights reserved.
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
- * You can obtain one at http://mozilla.org/MPL/2.0/. */
+ * You can obtain one at https://mozilla.org/MPL/2.0/. */
 
 package org.chromium.chrome.browser.crypto_wallet.util;
 
@@ -84,9 +84,11 @@ import org.chromium.chrome.R;
 import org.chromium.chrome.browser.ChromeTabbedActivity;
 import org.chromium.chrome.browser.app.BraveActivity;
 import org.chromium.chrome.browser.app.ChromeActivity;
+import org.chromium.chrome.browser.app.domain.PortfolioModel;
 import org.chromium.chrome.browser.crypto_wallet.activities.AssetDetailActivity;
 import org.chromium.chrome.browser.crypto_wallet.activities.BraveWalletBaseActivity;
 import org.chromium.chrome.browser.crypto_wallet.activities.BuySendSwapActivity;
+import org.chromium.chrome.browser.crypto_wallet.activities.NftDetailActivity;
 import org.chromium.chrome.browser.crypto_wallet.adapters.WalletCoinAdapter;
 import org.chromium.chrome.browser.crypto_wallet.fragments.ApproveTxBottomSheetDialogFragment;
 import org.chromium.chrome.browser.crypto_wallet.listeners.OnWalletListItemClick;
@@ -159,6 +161,9 @@ public class Utils {
     public static final String ASSET_DECIMALS = "assetDecimals";
     public static final String CHAIN_ID = "chainId";
     public static final String IS_FROM_DAPPS = "isFromDapps";
+    public static final String RESTART_WALLET_ACTIVITY = "restartWalletActivity";
+    public static final String RESTART_WALLET_ACTIVITY_SETUP = "restartWalletActivitySetup";
+    public static final String RESTART_WALLET_ACTIVITY_RESTORE = "restartWalletActivityRestore";
     public static final String ETHEREUM_CONTRACT_FOR_SWAP =
             "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
     public static final BigInteger MAX_UINT256 =
@@ -1428,23 +1433,8 @@ public class Utils {
         List<WalletListItemModel> walletListItemModelList = new ArrayList<>();
 
         for (BlockchainToken userAsset : userAssets) {
-            String currentAssetKey = Utils.tokenToString(userAsset);
-            Double fiatBalance = Utils.getOrDefault(perTokenFiatSum, currentAssetKey, 0.0d);
-            String fiatBalanceString = String.format(Locale.getDefault(), "$%,.2f", fiatBalance);
-            Double cryptoBalance = Utils.getOrDefault(perTokenCryptoSum, currentAssetKey, 0.0d);
-            String cryptoBalanceString =
-                    String.format(Locale.getDefault(), "%.4f %s", cryptoBalance, userAsset.symbol);
-
-            WalletListItemModel walletListItemModel =
-                    new WalletListItemModel(Utils.getCoinIcon(userAsset.coin), userAsset.name,
-                            userAsset.symbol, userAsset.tokenId,
-                            // Amount in USD
-                            fiatBalanceString,
-                            // Amount in current crypto currency/token
-                            cryptoBalanceString);
-
-            walletListItemModel.setIconPath("file://" + tokensPath + "/" + userAsset.logo);
-            walletListItemModel.setBlockchainToken(userAsset);
+            WalletListItemModel walletListItemModel = mapToWalletListItemModel(
+                    perTokenCryptoSum, perTokenFiatSum, tokensPath, userAsset);
             walletListItemModelList.add(walletListItemModel);
         }
 
@@ -1452,6 +1442,50 @@ public class Utils {
         walletCoinAdapter.setWalletListItemType(Utils.ASSET_ITEM);
 
         return walletCoinAdapter;
+    }
+
+    public static WalletCoinAdapter setupVisibleNftAssetList(
+            List<PortfolioModel.NftDataModel> userAssets, HashMap<String, Double> perTokenCryptoSum,
+            HashMap<String, Double> perTokenFiatSum, String tokensPath) {
+        WalletCoinAdapter walletCoinAdapter =
+                new WalletCoinAdapter(WalletCoinAdapter.AdapterType.VISIBLE_ASSETS_LIST);
+        List<WalletListItemModel> walletListItemModelList = new ArrayList<>();
+
+        for (PortfolioModel.NftDataModel userAsset : userAssets) {
+            WalletListItemModel walletListItemModel = mapToWalletListItemModel(
+                    perTokenCryptoSum, perTokenFiatSum, tokensPath, userAsset.token);
+            walletListItemModel.setNftDataModel(userAsset);
+            walletListItemModelList.add(walletListItemModel);
+        }
+
+        walletCoinAdapter.setWalletListItemModelList(walletListItemModelList);
+        walletCoinAdapter.setWalletListItemType(Utils.ASSET_ITEM);
+
+        return walletCoinAdapter;
+    }
+
+    @NonNull
+    private static WalletListItemModel mapToWalletListItemModel(
+            HashMap<String, Double> perTokenCryptoSum, HashMap<String, Double> perTokenFiatSum,
+            String tokensPath, BlockchainToken userAsset) {
+        String currentAssetKey = Utils.tokenToString(userAsset);
+        Double fiatBalance = Utils.getOrDefault(perTokenFiatSum, currentAssetKey, 0.0d);
+        String fiatBalanceString = String.format(Locale.getDefault(), "$%,.2f", fiatBalance);
+        Double cryptoBalance = Utils.getOrDefault(perTokenCryptoSum, currentAssetKey, 0.0d);
+        String cryptoBalanceString =
+                String.format(Locale.getDefault(), "%.4f %s", cryptoBalance, userAsset.symbol);
+
+        WalletListItemModel walletListItemModel =
+                new WalletListItemModel(Utils.getCoinIcon(userAsset.coin), userAsset.name,
+                        userAsset.symbol, userAsset.tokenId,
+                        // Amount in USD
+                        fiatBalanceString,
+                        // Amount in current crypto currency/token
+                        cryptoBalanceString);
+
+        walletListItemModel.setIconPath("file://" + tokensPath + "/" + userAsset.logo);
+        walletListItemModel.setBlockchainToken(userAsset);
+        return walletListItemModel;
     }
 
     public static String formatErc721TokenTitle(String title, String id) {
@@ -1634,7 +1668,8 @@ public class Utils {
     }
 
     public static boolean allowBuy(String chainId) {
-        return WalletConstants.BUY_SUPPORTED_NETWORKS.contains(chainId);
+        return !WalletConstants.KNOWN_TEST_CHAIN_IDS.contains(chainId)
+                && WalletConstants.BUY_SUPPORTED_ONRAMP_NETWORKS.contains(chainId);
     }
 
     public static boolean allowSwap(String chainId) {

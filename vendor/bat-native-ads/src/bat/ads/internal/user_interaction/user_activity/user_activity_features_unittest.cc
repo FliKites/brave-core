@@ -1,7 +1,7 @@
 /* Copyright (c) 2020 The Brave Authors. All rights reserved.
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
- * You can obtain one at http://mozilla.org/MPL/2.0/. */
+ * You can obtain one at https://mozilla.org/MPL/2.0/. */
 
 #include "bat/ads/internal/user_interaction/user_activity/user_activity_features.h"
 
@@ -45,8 +45,8 @@ TEST(BatAdsUserActivityFeaturesTest, Disabled) {
 TEST(BatAdsUserActivityFeaturesTest, Triggers) {
   // Arrange
   base::FieldTrialParams parameters;
-  const char kTriggersParameter[] = "triggers";
-  parameters[kTriggersParameter] = "01=0.5;010203=1.0;0203=0.75";
+  const char triggers_parameter[] = "triggers";
+  parameters[triggers_parameter] = "01=0.5;010203=1.0;0203=0.75";
   std::vector<base::test::FeatureRefAndParams> enabled_features;
   enabled_features.emplace_back(kFeature, parameters);
 
@@ -105,8 +105,8 @@ TEST(BatAdsUserActivityFeaturesTest, DefaultTriggersWhenDisabled) {
 TEST(BatAdsUserActivityFeaturesTest, TimeWindow) {
   // Arrange
   base::FieldTrialParams parameters;
-  const char kTimeWindowParameter[] = "time_window";
-  parameters[kTimeWindowParameter] = "2h";
+  const char time_window_parameter[] = "time_window";
+  parameters[time_window_parameter] = "2h";
   std::vector<base::test::FeatureRefAndParams> enabled_features;
   enabled_features.emplace_back(kFeature, parameters);
 
@@ -164,8 +164,8 @@ TEST(BatAdsUserActivityFeaturesTest, DefaultTimeWindowWhenDisabled) {
 TEST(BatAdsUserActivityFeaturesTest, Threshold) {
   // Arrange
   base::FieldTrialParams parameters;
-  const char kThresholdParameter[] = "threshold";
-  parameters[kThresholdParameter] = "7.0";
+  const char threshold_parameter[] = "threshold";
+  parameters[threshold_parameter] = "7.0";
   std::vector<base::test::FeatureRefAndParams> enabled_features;
   enabled_features.emplace_back(kFeature, parameters);
 
@@ -223,8 +223,8 @@ TEST(BatAdsUserActivityFeaturesTest, DefaultThresholdWhenDisabled) {
 TEST(BatAdsUserActivityFeaturesTest, IdleTimeThreshold) {
   // Arrange
   base::FieldTrialParams parameters;
-  const char kIdleTimeThresholdParameter[] = "idle_time_threshold";
-  parameters[kIdleTimeThresholdParameter] = "7s";
+  const char idle_time_threshold_parameter[] = "idle_time_threshold";
+  parameters[idle_time_threshold_parameter] = "7s";
   std::vector<base::test::FeatureRefAndParams> enabled_features;
   enabled_features.emplace_back(kFeature, parameters);
 
@@ -282,8 +282,8 @@ TEST(BatAdsUserActivityFeaturesTest, DefaultIdleTimeThresholdWhenDisabled) {
 TEST(BatAdsUserActivityFeaturesTest, MaximumIdleTime) {
   // Arrange
   base::FieldTrialParams parameters;
-  const char kMaximumIdleTimeParameter[] = "maximum_idle_time";
-  parameters[kMaximumIdleTimeParameter] = "30m";
+  const char maximum_idle_time_parameter[] = "maximum_idle_time";
+  parameters[maximum_idle_time_parameter] = "30m";
   std::vector<base::test::FeatureRefAndParams> enabled_features;
   enabled_features.emplace_back(kFeature, parameters);
 
@@ -341,9 +341,9 @@ TEST(BatAdsUserActivityFeaturesTest, DefaultMaximumIdleTimeWhenDisabled) {
 TEST(BatAdsUserActivityFeaturesTest, ShouldDetectScreenWasLocked) {
   // Arrange
   base::FieldTrialParams parameters;
-  const char kShouldDetectScreenWasLockedParameter[] =
+  const char should_detect_screen_was_locked_parameter[] =
       "should_detect_was_locked";
-  parameters[kShouldDetectScreenWasLockedParameter] = "false";
+  parameters[should_detect_screen_was_locked_parameter] = "false";
   std::vector<base::test::FeatureRefAndParams> enabled_features;
   enabled_features.emplace_back(kFeature, parameters);
 

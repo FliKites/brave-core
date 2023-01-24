@@ -1,7 +1,7 @@
-/* Copyright 2021 The Brave Authors. All rights reserved.
+/* Copyright (c) 2021 The Brave Authors. All rights reserved.
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
- * You can obtain one at http://mozilla.org/MPL/2.0/. */
+ * You can obtain one at https://mozilla.org/MPL/2.0/. */
 
 #include "brave/components/p3a/p3a_message.h"
 
@@ -11,6 +11,7 @@
 #include "base/logging.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/trace_event/trace_event.h"
+#include "brave/components/brave_stats/browser/brave_stats_updater_util.h"
 #include "brave/components/p3a/brave_p3a_uploader.h"
 #include "crypto/sha2.h"
 
@@ -21,6 +22,7 @@ MessageMetainfo::~MessageMetainfo() = default;
 
 base::Value::Dict GenerateP3AMessageDict(base::StringPiece metric_name,
                                          uint64_t metric_value,
+                                         MetricLogType log_type,
                                          const MessageMetainfo& meta,
                                          const std::string& upload_type) {
   base::Value::Dict result;
@@ -36,28 +38,60 @@ base::Value::Dict GenerateP3AMessageDict(base::StringPiece metric_name,
     return result;
   }
 
-  // Find out years of install and survey.
-  base::Time::Exploded exploded;
-  meta.date_of_survey.LocalExplode(&exploded);
-  DCHECK_GE(exploded.year, 999);
-  result.Set("yos", exploded.year);
+  base::Time date_of_install_monday =
+      brave_stats::GetLastMondayTime(meta.date_of_install);
+  base::Time date_of_survey = meta.date_of_survey;
 
-  meta.date_of_install.LocalExplode(&exploded);
-  DCHECK_GE(exploded.year, 999);
-  result.Set("yoi", exploded.year);
+  if (log_type != MetricLogType::kSlow) {
+    // Get last monday for the date so that the years of survey/install
+    // correctly match the ISO weeks of survey/install. i.e. date of survey =
+    // Sunday, January 1, 2023 should result in yos = 2022 and wos = 52 since
+    // that date falls on the last ISO week of the previous year.
+    date_of_survey = brave_stats::GetLastMondayTime(date_of_survey);
+  }
+
+  // Find out years of install and survey.
+  base::Time::Exploded survey_exploded;
+  base::Time::Exploded install_exploded;
+  date_of_survey.LocalExplode(&survey_exploded);
+  date_of_install_monday.LocalExplode(&install_exploded);
+
+  DCHECK_GE(survey_exploded.year, 999);
+  result.Set("yos", survey_exploded.year);
+
+  DCHECK_GE(install_exploded.year, 999);
+  result.Set("yoi", install_exploded.year);
 
   // Fill meta.
   result.Set("country_code", meta.country_code);
   result.Set("version", meta.version);
   result.Set("woi", meta.woi);
-  result.Set("wos", meta.wos);
+
+  if (log_type == MetricLogType::kSlow) {
+    result.Set("mos", survey_exploded.month);
+  } else {
+    result.Set("wos", brave_stats::GetIsoWeekNumber(date_of_survey));
+  }
+
+  std::string cadence;
+  switch (log_type) {
+    case MetricLogType::kSlow:
+      cadence = "slow";
+      break;
+    case MetricLogType::kTypical:
+      cadence = "typical";
+      break;
+    case MetricLogType::kExpress:
+      cadence = "express";
+      break;
+  }
+  result.Set("cadence", cadence);
 
   return result;
 }
 
-void MaybeStripRefcodeAndCountry(MessageMetainfo* meta) {
+void MaybeStripCountry(MessageMetainfo* meta) {
   const std::string& country = meta->country_code;
-  constexpr char kRefcodeNone[] = "none";
   constexpr char kCountryOther[] = "other";
 
   static base::flat_set<std::string> const kLinuxCountries(
@@ -69,10 +103,6 @@ void MaybeStripRefcodeAndCountry(MessageMetainfo* meta) {
        "AU", "RU", "JP", "PL", "ID", "KR", "AR"});
 
   DCHECK(meta);
-
-  // Always strip the refcode.
-  // We no longer need to partition P3A data with that key.
-  meta->refcode = kRefcodeNone;
 
   if (meta->platform == "linux-bc") {
     // If we have more than 3/0.05 = 60 users in a country for

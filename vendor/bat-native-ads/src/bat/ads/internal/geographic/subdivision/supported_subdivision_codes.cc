@@ -1,7 +1,7 @@
 /* Copyright (c) 2022 The Brave Authors. All rights reserved.
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
- * You can obtain one at http://mozilla.org/MPL/2.0/. */
+ * You can obtain one at https://mozilla.org/MPL/2.0/. */
 
 #include "bat/ads/internal/geographic/subdivision/supported_subdivision_codes.h"
 
@@ -14,7 +14,7 @@ const SupportedSubdivisionCodesMap& GetSupportedSubdivisionCodes() {
   //  Format: { ISO Country Code, { ISO country subdivision codes as defined
   //  in ISO 3166-2 https://en.wikipedia.org/wiki/ISO_3166-2, ... } }
   static const base::NoDestructor<SupportedSubdivisionCodesMap>
-      supported_subdivision_codes(
+      kSupportedSubdivisionCodes(
           {{"US",
             {// United States of America
              {"US-AL", "Alabama"},        {"US-AK", "Alaska"},
@@ -53,7 +53,7 @@ const SupportedSubdivisionCodesMap& GetSupportedSubdivisionCodes() {
              {"CA-QC", "Quebec"},
              {"CA-SK", "Saskatchewan"}}}});
 
-  return *supported_subdivision_codes;
+  return *kSupportedSubdivisionCodes;
 }
 
 bool IsSupportedSubdivisionCode(const std::string& country_code,

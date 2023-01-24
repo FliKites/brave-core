@@ -1,7 +1,7 @@
 /* Copyright (c) 2022 The Brave Authors. All rights reserved.
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
- * You can obtain one at http://mozilla.org/MPL/2.0/. */
+ * You can obtain one at https://mozilla.org/MPL/2.0/. */
 
 #include "bat/ads/internal/ads/serving/eligible_ads/exclusion_rules/exclusion_rule_features.h"
 
@@ -44,10 +44,10 @@ TEST(BatAdsExclusionRuleFeaturesTest, IsDisabled) {
 
 TEST(BatAdsExclusionRuleFeaturesTest, ShouldExcludeAdIfConverted) {
   // Arrange
-  base::FieldTrialParams kParameters;
-  kParameters["should_exclude_ad_if_converted"] = "false";
+  base::FieldTrialParams parameters;
+  parameters["should_exclude_ad_if_converted"] = "false";
   std::vector<base::test::FeatureRefAndParams> enabled_features;
-  enabled_features.emplace_back(kFeature, kParameters);
+  enabled_features.emplace_back(kFeature, parameters);
 
   const std::vector<base::test::FeatureRef> disabled_features;
 
@@ -105,8 +105,8 @@ TEST(BatAdsExclusionRuleFeaturesTest, DisabledShouldExcludeAdIfConverted) {
 TEST(BatAdsExclusionRuleFeaturesTest, ExcludeAdIfDismissedWithinTimeWindow) {
   // Arrange
   base::FieldTrialParams parameters;
-  const char kParameter[] = "exclude_ad_if_dismissed_within_time_window";
-  parameters[kParameter] = "24h";
+  const char parameter[] = "exclude_ad_if_dismissed_within_time_window";
+  parameters[parameter] = "24h";
   std::vector<base::test::FeatureRefAndParams> enabled_features;
   enabled_features.emplace_back(kFeature, parameters);
 
@@ -166,8 +166,8 @@ TEST(BatAdsExclusionRuleFeaturesTest,
 TEST(BatAdsUserActivityFeaturesTest, ExcludeAdIfTransferredWithinTimeWindow) {
   // Arrange
   base::FieldTrialParams parameters;
-  const char kParameter[] = "exclude_ad_if_transferred_within_time_window";
-  parameters[kParameter] = "24h";
+  const char parameter[] = "exclude_ad_if_transferred_within_time_window";
+  parameters[parameter] = "24h";
   std::vector<base::test::FeatureRefAndParams> enabled_features;
   enabled_features.emplace_back(kFeature, parameters);
 

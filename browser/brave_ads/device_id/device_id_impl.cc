@@ -1,7 +1,7 @@
 /* Copyright (c) 2022 The Brave Authors. All rights reserved.
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
- * You can obtain one at http://mozilla.org/MPL/2.0/. */
+ * You can obtain one at https://mozilla.org/MPL/2.0/. */
 
 #include "brave/browser/brave_ads/device_id/device_id_impl.h"
 
@@ -62,10 +62,10 @@ bool IsValidMacAddressImpl(const void* bytes, size_t size) {
     unsigned char address[kMacLength];
   };
 
-  const size_t kOuiLength = 3;
+  constexpr size_t kOuiLength = 3;
 
   // VPN, virtualization, tethering, bluetooth, etc.
-  static MacAddressInfo kInvalidMacAddresses[] = {
+  static MacAddressInfo invalid_mac_addresses[] = {
       // Empty address
       {kMacLength, {0, 0, 0, 0, 0, 0}},
       // VMware
@@ -167,7 +167,7 @@ bool IsValidMacAddressImpl(const void* bytes, size_t size) {
     return false;
   }
 
-  for (const auto& mac_address : kInvalidMacAddresses) {
+  for (const auto& mac_address : invalid_mac_addresses) {
     if (memcmp(mac_address.address, bytes, mac_address.count) == 0) {
       return false;
     }

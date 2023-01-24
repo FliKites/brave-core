@@ -10,7 +10,6 @@ import * as BraveWallet from 'gen/brave/components/brave_wallet/common/brave_wal
 import Amount from './amount'
 import {
   getRampNetworkPrefix,
-  getWyreNetworkPrefix,
   httpifyIpfsUrl
 } from './string-utils'
 
@@ -31,19 +30,6 @@ export const isSelectedAssetInAssetOptions = (
       asset.chainId === selectedAsset.chainId &&
       asset.symbol.toLowerCase() === selectedAsset.symbol.toLowerCase()
   }) !== -1
-}
-
-export const getWyreAssetSymbol = (asset: BraveWallet.BlockchainToken) => {
-  if (
-    !asset.contractAddress || // gas coins ok
-    asset.chainId === BraveWallet.MAINNET_CHAIN_ID // ETH-ERC coins ok
-  ) {
-    return asset.symbol
-  }
-
-  // format non-ethereum EVM token symbols for Wyre
-  const prefix = getWyreNetworkPrefix(asset.chainId)
-  return prefix ? `${prefix}${asset.symbol.toUpperCase()}` : asset.symbol
 }
 
 export const getRampAssetSymbol = (asset: BraveWallet.BlockchainToken) => {
@@ -213,12 +199,15 @@ export const getAssetIdKey = (asset: GetBlockchainTokenIdArg) => {
  */
 export const isSardineSupported = () => navigator.language.toLowerCase() === 'en-us'
 
-export const findTokenByContractAddress = (
+export const findTokenByContractAddress = <
+  T extends Pick<BraveWallet.BlockchainToken, 'contractAddress'>
+>(
   contractAddress: string,
-  tokensList: BraveWallet.BlockchainToken[]
-) => {
-  return tokensList.find((token) =>
-    token.contractAddress.toLowerCase() === contractAddress.toLowerCase()
+  tokensList: T[]
+): T | undefined => {
+  return tokensList.find(
+    (token) =>
+      token.contractAddress.toLowerCase() === contractAddress.toLowerCase()
   )
 }
 
@@ -247,4 +236,14 @@ export const formatTokenBalance = (
         .divideByDecimals(selectedAsset?.decimals ?? 18)
         .formatAsAsset(decimalPlaces ?? 6, selectedAsset?.symbol ?? '')
     : ''
+}
+
+export const checkIfTokensMatch = (
+  tokenOne: BraveWallet.BlockchainToken,
+  tokenTwo: BraveWallet.BlockchainToken
+): boolean => {
+  return tokenOne.symbol.toLowerCase() === tokenTwo.symbol.toLowerCase() &&
+    tokenOne.contractAddress.toLowerCase() === tokenTwo.contractAddress.toLowerCase() &&
+    tokenOne.chainId === tokenTwo.chainId &&
+    tokenOne.tokenId === tokenTwo.tokenId
 }

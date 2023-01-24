@@ -1,10 +1,11 @@
-/* Copyright 2022 The Brave Authors. All rights reserved.
+/* Copyright (c) 2022 The Brave Authors. All rights reserved.
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
- * You can obtain one at http://mozilla.org/MPL/2.0/. */
+ * You can obtain one at https://mozilla.org/MPL/2.0/. */
 
 #include "brave/components/brave_ads/renderer/search_result_ad_renderer_throttle.h"
 
+#include <string>
 #include <utility>
 
 #include "base/feature_list.h"  // IWYU pragma: keep
@@ -85,12 +86,20 @@ void SearchResultAdRendererThrottle::DetachFromCurrentSequence() {}
 void SearchResultAdRendererThrottle::WillStartRequest(
     network::ResourceRequest* request,
     bool* defer) {
-  DCHECK(request);
-  DCHECK(request->request_initiator);
-  DCHECK(brave_search::IsAllowedHost(request->request_initiator->GetURL()));
-  DCHECK_EQ(request->resource_type,
-            static_cast<int>(blink::mojom::ResourceType::kXhr));
-  DCHECK(request->is_fetch_like_api);
+  DCHECK(defer);
+
+  if (!request || !request->request_initiator) {
+    brave_ads_pending_remote_.reset();
+    return;
+  }
+
+  if (!request->is_fetch_like_api ||
+      request->resource_type !=
+          static_cast<int>(blink::mojom::ResourceType::kXhr) ||
+      !brave_search::IsAllowedHost(request->request_initiator->GetURL())) {
+    brave_ads_pending_remote_.reset();
+    return;
+  }
 
   const std::string creative_instance_id =
       GetViewedSearchResultAdCreativeInstanceId(*request);

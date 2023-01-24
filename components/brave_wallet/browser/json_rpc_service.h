@@ -90,6 +90,7 @@ class JsonRpcService : public KeyedService, public mojom::JsonRpcService {
       const std::string& error_message)>;
   using EthGetLogsCallback =
       base::OnceCallback<void(const std::vector<Log>& logs,
+                              base::Value rawlogs,
                               mojom::ProviderError error,
                               const std::string& error_message)>;
   void GetBlockNumber(GetBlockNumberCallback callback);
@@ -186,12 +187,8 @@ class JsonRpcService : public KeyedService, public mojom::JsonRpcService {
   void SnsGetSolAddr(const std::string& domain,
                      SnsGetSolAddrCallback callback) override;
 
-  using SnsResolveHostCallback =
-      base::OnceCallback<void(const GURL& url,
-                              mojom::SolanaProviderError error,
-                              const std::string& error_message)>;
   void SnsResolveHost(const std::string& domain,
-                      SnsResolveHostCallback callback);
+                      SnsResolveHostCallback callback) override;
 
   bool SetNetwork(const std::string& chain_id,
                   mojom::CoinType coin,
@@ -416,6 +413,14 @@ class JsonRpcService : public KeyedService, public mojom::JsonRpcService {
                               const std::string& error_message)>;
   void GetSolanaBlockHeight(GetSolanaBlockHeightCallback callback);
 
+  using GetSolanaTokenAccountsByOwnerCallback = base::OnceCallback<void(
+      const std::vector<SolanaAccountInfo>& token_accounts,
+      mojom::SolanaProviderError error,
+      const std::string& error_message)>;
+  void GetSolanaTokenAccountsByOwner(
+      const SolanaAddress& pubkey,
+      GetSolanaTokenAccountsByOwnerCallback callback);
+
  private:
   void FireNetworkChanged(mojom::CoinType coin);
   void FirePendingRequestCompleted(const std::string& chain_id,
@@ -562,6 +567,9 @@ class JsonRpcService : public KeyedService, public mojom::JsonRpcService {
                                 APIRequestResult api_request_result);
   void OnGetSolanaBlockHeight(GetSolanaBlockHeightCallback callback,
                               APIRequestResult api_request_result);
+  void OnGetSolanaTokenAccountsByOwner(
+      GetSolanaTokenAccountsByOwnerCallback callback,
+      APIRequestResult api_request_result);
 
   scoped_refptr<network::SharedURLLoaderFactory> url_loader_factory_;
   std::unique_ptr<APIRequestHelper> api_request_helper_;

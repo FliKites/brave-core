@@ -62,7 +62,7 @@ public class BravePermissionUtils {
                     (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
             NotificationChannelGroup notificationChannelGroup =
                     notificationManager.getNotificationChannelGroup(channelGroupName);
-            return notificationChannelGroup.isBlocked();
+            return notificationChannelGroup != null ? notificationChannelGroup.isBlocked() : false;
         } else {
             return NotificationManagerCompat.from(context).areNotificationsEnabled();
         }
@@ -77,17 +77,6 @@ public class BravePermissionUtils {
     }
 
     public static void requestPermission(Activity activity) {
-        if (activity.shouldShowRequestPermissionRationale(
-                    PermissionConstants.NOTIFICATION_PERMISSION)
-                || (!BuildInfo.isAtLeastT() || !BuildInfo.targetsAtLeastT())) {
-            // other than android 13 redirect to
-            // setting page and for android 13 Last time don't allow selected in permission
-            // dialog, then enable through setting
-            BravePermissionUtils.notificationSettingPage(activity);
-        } else {
-            // 1st time request permission
-            ActivityCompat.requestPermissions(
-                    activity, new String[] {PermissionConstants.NOTIFICATION_PERMISSION}, 1);
-        }
+        BravePermissionUtils.notificationSettingPage(activity);
     }
 }

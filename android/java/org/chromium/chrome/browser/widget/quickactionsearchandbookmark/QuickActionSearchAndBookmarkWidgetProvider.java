@@ -2,7 +2,7 @@
   Copyright (c) 2022 The Brave Authors. All rights reserved.
   This Source Code Form is subject to the terms of the Mozilla Public
   License, v. 2.0. If a copy of the MPL was not distributed with this file,
-  You can obtain one at http://mozilla.org/MPL/2.0/.
+  You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
 package org.chromium.chrome.browser.widget.quickactionsearchandbookmark;
@@ -29,13 +29,18 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import org.chromium.base.Consumer;
 import org.chromium.base.ContextUtils;
 import org.chromium.base.IntentUtils;
+import org.chromium.base.Log;
+import org.chromium.base.library_loader.ProcessInitException;
 import org.chromium.chrome.R;
 import org.chromium.chrome.browser.IntentHandler;
 import org.chromium.chrome.browser.browserservices.intents.WebappConstants;
 import org.chromium.chrome.browser.document.ChromeLauncherActivity;
+import org.chromium.chrome.browser.init.BrowserParts;
 import org.chromium.chrome.browser.init.ChromeBrowserInitializer;
+import org.chromium.chrome.browser.init.EmptyBrowserParts;
 import org.chromium.chrome.browser.preferences.SharedPreferencesManager;
 import org.chromium.chrome.browser.profiles.Profile;
 import org.chromium.chrome.browser.searchwidget.SearchActivity;
@@ -43,6 +48,8 @@ import org.chromium.chrome.browser.settings.BraveSearchEngineUtils;
 import org.chromium.chrome.browser.suggestions.tile.Tile;
 import org.chromium.chrome.browser.ui.favicon.FaviconUtils;
 import org.chromium.chrome.browser.ui.searchactivityutils.SearchActivityConstants;
+import org.chromium.chrome.browser.ui.searchactivityutils.SearchActivityPreferencesManager;
+import org.chromium.chrome.browser.ui.searchactivityutils.SearchActivityPreferencesManager.SearchActivityPreferences;
 import org.chromium.chrome.browser.widget.quickactionsearchandbookmark.utils.BraveSearchWidgetUtils;
 import org.chromium.components.browser_ui.widget.RoundedIconGenerator;
 import org.chromium.components.favicon.IconType;
@@ -60,12 +67,25 @@ import java.util.List;
 import java.util.Objects;
 
 public class QuickActionSearchAndBookmarkWidgetProvider extends AppWidgetProvider {
+    private static final String TAG = "WidgetProvider";
+
+    static class QuickActionSearchAndBookmarkWidgetProviderDelegate
+            implements Consumer<SearchActivityPreferences> {
+        public QuickActionSearchAndBookmarkWidgetProviderDelegate() {}
+
+        @Override
+        public void accept(SearchActivityPreferences prefs) {
+            if (prefs == null) prefs = SearchActivityPreferencesManager.getCurrent();
+            updateSearchEngine(prefs.searchEngineName);
+        }
+    }
+
     public static String FROM_SETTINGS = "FROM_SETTINGS";
 
     private static final int TOTAL_TILES = 16;
     private static final int TILES_PER_ROW = 4;
-    private static final int MIN_VISIBLE_HEIGHT_ROW_1 = 116;
-    private static final int MIN_VISIBLE_HEIGHT_ROW_2 = 184;
+    private static final int MIN_VISIBLE_HEIGHT_ROW_1 = 125;
+    private static final int MIN_VISIBLE_HEIGHT_ROW_2 = 220;
     private static final int MIN_VISIBLE_HEIGHT_ROW_3 = 252;
     private static final int MIN_VISIBLE_HEIGHT_ROW_4 = 320;
     private static final int DESIRED_ICON_SIZE = 44;
@@ -98,8 +118,29 @@ public class QuickActionSearchAndBookmarkWidgetProvider extends AppWidgetProvide
             },
     };
 
+    private static QuickActionSearchAndBookmarkWidgetProviderDelegate mDelegate;
+
     public QuickActionSearchAndBookmarkWidgetProvider() {
-        ChromeBrowserInitializer.getInstance().handleSynchronousStartup();
+        final BrowserParts parts = new EmptyBrowserParts();
+        try {
+            ChromeBrowserInitializer.getInstance().handlePreNativeStartupAndLoadLibraries(parts);
+
+            ChromeBrowserInitializer.getInstance().handlePostNativeStartup(
+                    true /* isAsync */, parts);
+        } catch (ProcessInitException e) {
+            Log.e(TAG, "Background Launch Error", e);
+        }
+    }
+
+    public static void initializeDelegate() {
+        SearchActivityPreferencesManager.addObserver(getDelegate());
+    }
+
+    private static QuickActionSearchAndBookmarkWidgetProviderDelegate getDelegate() {
+        if (mDelegate == null) {
+            mDelegate = new QuickActionSearchAndBookmarkWidgetProviderDelegate();
+        }
+        return mDelegate;
     }
 
     @Override
@@ -134,6 +175,7 @@ public class QuickActionSearchAndBookmarkWidgetProvider extends AppWidgetProvide
     }
 
     public static void updateSearchEngine(String searchEngine) {
+        if (searchEngine == null) return;
         Context context = ContextUtils.getApplicationContext();
         AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
         int[] appWidgetIds = getAppWidgetIds(context, appWidgetManager);
